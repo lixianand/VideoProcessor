@@ -1,0 +1,16 @@
+- Use references for all the for-each loops (ex. &contour : contours)
+- Use fixed arrays for polygon functions
+- Use pointers/references when possible
+- Work within existing array when possible instead of new creation
+   - Just delete filtered contours instead of not pushing them to another list!
+- Use dynamically sized arrays w/ pointers/references
+- Use fixed-arrays sized at runtime 
+- examine which functions should be inline
+- read this and consider:
+	http://www.learncpp.com/cpp-tutorial/7-10-stdvector-capacity-and-stack-behavior/
+	changing code to avoid resizing the stack, and use pop functions instead of not
+	writing to new vector
+
+not performance but good to do
+- for all for-each loops, make variable const unless modifying
+- use for each in every scenario that the index is not needed
