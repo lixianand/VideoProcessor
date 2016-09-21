@@ -15,9 +15,41 @@
 #include "lane_detect_constants.h"
 #include "lane_detect_processor.h"
 
+namespace lanedetectconstants {
+
+	//Segment filters
+	uint16_t ksegmentellipseheight{5};
+	float ksegmentanglewindow{134.0f};
+	float ksegmentlengthwidthratio{1.77f};
+	
+	//Construct from segments filters
+	float ksegmentsanglewindow{23.4f};
+	
+	//Final contour filters
+	//uint16_t klength{100};
+	uint16_t kellipseheight{20};
+	float kanglewindow{85.4f};
+	float klengthwidthratio{12.88f};
+	
+	//Scoring variables
+    double kcommonanglewindow = 34.2;
+    uint16_t kminroadwidth = 326.0;
+    uint16_t kmaxroadwidth = 652.0;
+	uint16_t koptimumwidth = 466;
+	//weighting for best grade
+	double klengthweight = 3.8;
+	double kangleweight = -5.3;
+	double kcenteredweight = -4.6;
+	double kwidthweight = 0.4;		//-1.0;
+	double klowestpointweight = 0.7;	//-0.25;	//Should be higher but I have bad test videos
+	double klowestscorelimit = -DBL_MAX;
+	
+}
+
 //Main function
-//void ProcessImage ( cv::Mat image, Polygon& polygon )
-void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
+void ProcessImage ( cv::Mat image,
+                    Polygon& polygon )
+//void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
 {
 //-----------------------------------------------------------------------------------------
 //Image manipulation
@@ -26,23 +58,6 @@ void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
 	cv::cvtColor( image, image, CV_BGR2GRAY );
 	//Blur to reduce noise
     cv::blur( image, image, cv::Size(3,3) );
-		
-//-----------------------------------------------------------------------------------------
-//Find blob keypoints
-//-----------------------------------------------------------------------------------------	
-    std::vector<cv::KeyPoint> keypoints;
-	if ( lanedetectconstants::enableblobcontour ||
-		lanedetectconstants::enablesegmentblobcontour ) {
-			cv::Ptr<cv::SimpleBlobDetector> blobdetector { cv::SimpleBlobDetector::create(
-			lanedetectconstants::klanedetectblobparams()) };
-			blobdetector->detect(image, keypoints);
-		}
-	//Remove all keypoints by position
-	for (int i = 0; i < keypoints.size(); i++ ) {
-		if ( keypoints[i].pt.y < (image.rows/3) ) {
-			keypoints.erase( keypoints.begin() + i );
-		}
-	}
 	
 //-----------------------------------------------------------------------------------------
 //Find contours
@@ -52,23 +67,17 @@ void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
 		CV_THRESH_BINARY | CV_THRESH_OTSU );
 	//Canny edge detection
     cv::Canny(image, image, otsuthreshval*0.5, otsuthreshval );
-	cv::cvtColor( image, cannyimage, CV_GRAY2BGR );
-	std::vector<std::vector<cv::Point>> detectedcontours;
+	//cv::cvtColor( image, cannyimage, CV_GRAY2BGR );
+	std::vector<Contour> detectedcontours;
     std::vector<cv::Vec4i> detectedhierarchy;
     cv::findContours( image, detectedcontours, detectedhierarchy,
 		CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
-		//CV_RETR_CCOMP, CV_CHAIN_APPROX_TC89_KCOS );
-		//CV_RETR_CCOMP, CV_CHAIN_APPROX_TC89_L1 );
 	//Contours removed by position in function
 
-
-//-----------------------------------------------------------------------------------------
-//Construct contours from blobs only
-//-----------------------------------------------------------------------------------------	
-    std::vector<std::vector<cv::Point>> constructedcontours;
-	if ( lanedetectconstants::enableblobcontour ) {
-		ConstructFromBlobs( keypoints , constructedcontours );	
-	}
+	//ToDo - There's way more I could be doing:
+		//Dilate?
+		//HoughLineP evaluation?
+		//LSDDetector?
 		
 //-----------------------------------------------------------------------------------------
 //Evaluate contours
@@ -84,22 +93,15 @@ void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
     }
 
 //-----------------------------------------------------------------------------------------
-//Construct from segment and a blob
-//-----------------------------------------------------------------------------------------	
-	if ( lanedetectconstants::enablesegmentblobcontour ) {
-		ConstructFromSegmentAndBlob( evaluatedchildsegments, keypoints ,
-			constructedcontours );	
-	}
-
-//-----------------------------------------------------------------------------------------
 //Construct from segments
 //-----------------------------------------------------------------------------------------	
+    std::vector<std::vector<cv::Point>> constructedcontours;
 	ConstructFromSegments( evaluatedchildsegments, constructedcontours );
 
 //-----------------------------------------------------------------------------------------
 //Evaluate constructed segments
 //-----------------------------------------------------------------------------------------	
-	for ( std::vector<cv::Point> contour : constructedcontours ) {
+	for ( Contour contour : constructedcontours ) {
 		EvaluateSegment( contour, image.rows, evaluatedchildsegments );
 	}
 	
@@ -116,14 +118,14 @@ void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
 //-----------------------------------------------------------------------------------------	
 	Polygon bestpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0), cv::Point(0,0) };
 	double maxscore{lanedetectconstants::klowestscorelimit};
-	std::vector<cv::Point> leftcontour;
-	std::vector<cv::Point> rightcontour;
+	Contour leftcontour;
+	Contour rightcontour;
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
 			Polygon newpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
 				cv::Point(0,0) };
-			FindPolygon( newpolygon, *leftevaluatedontour.contour,
-				*rightevaluatedcontour.contour );
+			FindPolygon( newpolygon, leftevaluatedontour.contour,
+				rightevaluatedcontour.contour );
 			//If invalid polygon created, goto next
 			if ( newpolygon[0] == cv::Point(0,0) ) continue;
 			//If valid score
@@ -131,8 +133,8 @@ void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
 				rightevaluatedcontour) };
 			//If highest score update
 			if ( score > maxscore ) {
-				leftcontour = *leftevaluatedontour.contour;
-				rightcontour = *rightevaluatedcontour.contour;
+				leftcontour = leftevaluatedontour.contour;
+				rightcontour = rightevaluatedcontour.contour;
 				maxscore = score;
 				bestpolygon = newpolygon;
 			}
@@ -152,22 +154,24 @@ void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
 }
 
 /*****************************************************************************************/	
-void CreateKeypoints( const std::vector<std::vector<cv::Point>>& contours,
-	std::vector<cv::KeyPoint>& keypoints ) {
-		for ( const std::vector<cv::Point> &contour : contours ) {
-			//Get contour moment
-			cv::Moments moment{ cv::moments( contour, false ) };
-			//Push into keypoint vector
-			keypoints.push_back( cv::KeyPoint{ static_cast<float>(moment.m10/moment.m00),
-			static_cast<float>(moment.m01/moment.m00), static_cast<float>
-				(cv::contourArea(contour)) } );
-		}
-		return;
+void CreateKeypoints( const std::vector<Contour>& contours,
+                      std::vector<cv::KeyPoint>& keypoints )
+{
+	for ( const Contour &contour : contours ) {
+		//Get contour moment
+		cv::Moments moment{ cv::moments( contour, false ) };
+		//Push into keypoint vector
+		keypoints.push_back( cv::KeyPoint{ static_cast<float>(moment.m10/moment.m00),
+		static_cast<float>(moment.m01/moment.m00), static_cast<float>
+			(cv::contourArea(contour)) } );
 	}
+	return;
+}
 	
 /*****************************************************************************************/	
-void EvaluateSegment( const std::vector<cv::Point>& contour, const int imageheight,
-	std::vector<EvaluatedContour>&	evaluatedsegments )
+void EvaluateSegment( const Contour& contour,
+                      const int imageheight,
+					  std::vector<EvaluatedContour>& evaluatedsegments )
 {
 	//Filter by size, only to prevent exception when creating ellipse or fitline
 	if ( contour.size() < 5 ) return;
@@ -196,69 +200,16 @@ void EvaluateSegment( const std::vector<cv::Point>& contour, const int imageheig
 	//cv::Point center{ cv::Point(static_cast<float>(moment.m10/moment.m00),
 	//	static_cast<float>(moment.m01/moment.m00)) };
 	//Add to dataset
-	//evaluatedsegments.push_back( EvaluatedContour{&contour, ellipse, lengthwidthratio,
+	//evaluatedsegments.push_back( EvaluatedContour{contour, ellipse, lengthwidthratio,
 	//	moment, center, fitline} );
-	evaluatedsegments.push_back( EvaluatedContour{&contour, ellipse, lengthwidthratio,
+	evaluatedsegments.push_back( EvaluatedContour{contour, ellipse, lengthwidthratio,
 		angle, fitline} );
 	return;
 }
 
 /*****************************************************************************************/	
-void ConstructFromBlobs( const std::vector<cv::KeyPoint>& keypoints,
-	std::vector<std::vector<cv::Point>>& constructedcontours )
-{
-	for( const cv::KeyPoint &keypoint1 : keypoints ) {
-        float xpos1 = keypoint1.pt.x;
-        float ypos1 = keypoint1.pt.y;
-        for( const cv::KeyPoint &keypoint2 : keypoints ) {
-            float xpos2 = keypoint2.pt.x;
-            float ypos2 = keypoint2.pt.y;
-            for( const cv::KeyPoint &keypoint3 : keypoints ) {
-                float xpos3 = keypoint3.pt.x;
-                float ypos3 = keypoint3.pt.y;
-                float slope12 = abs((ypos1 - ypos2)/(xpos1 - xpos2));
-                float slope23 = abs((ypos2 - ypos3)/(xpos2 - xpos3));
-                float slope13 = abs((ypos1 - ypos3)/(xpos1 - xpos3));
-                if (((slope12 - slope23) < lanedetectconstants::kblobslopewindow) &&
-                    ((slope23 - slope13) < lanedetectconstants::kblobslopewindow) &&
-                    ((slope13 - slope12) < lanedetectconstants::kblobslopewindow)){
-					constructedcontours.push_back( std::vector<cv::Point> {
-						cv::Point(xpos1,ypos1),
-						cv::Point(((xpos1 + xpos2)/2),((ypos1 + ypos2)/2)),
-						cv::Point(xpos2,ypos2),
-						cv::Point(((xpos2 + xpos3)/2),((ypos2 + ypos3)/2)),
-						cv::Point(xpos3,ypos3)					
-					} );
-				}
-            }
-        }
-    }
-	return;
-}
-
-/*****************************************************************************************/	
-void ConstructFromSegmentAndBlob( const std::vector<EvaluatedContour>& evaluatedsegments,
-	const std::vector<cv::KeyPoint>& keypoints, std::vector<std::vector<cv::Point>>&
-	constructedcontours )
-{
-    for ( const EvaluatedContour &segcontour : evaluatedsegments ) {
-		for ( const cv::KeyPoint &keypoint : keypoints ) {
-			float createdangle = (180.0 / CV_PI) * atan2(segcontour.ellipse.center.y -
-				keypoint.pt.y, segcontour.ellipse.center.x - keypoint.pt.x);
-			float angledifference = abs(segcontour.angle - createdangle);
-			if (angledifference < lanedetectconstants::ksegmentblobanglewindow){
-				std::vector<cv::Point> newcontour{ *segcontour.contour };
-				newcontour.push_back( keypoint.pt );
-				constructedcontours.push_back( newcontour );
-			}
-		}
-    }
-	return;
-}
-
-/*****************************************************************************************/	
-void ConstructFromSegments(const  std::vector<EvaluatedContour>& evaluatedsegments,
-	std::vector<std::vector<cv::Point>>& constructedcontours )
+void ConstructFromSegments( const  std::vector<EvaluatedContour>& evaluatedsegments,
+                            std::vector<Contour>& constructedcontours )
 {
     for ( const EvaluatedContour &segcontour1 : evaluatedsegments ) {
 		for ( const EvaluatedContour &segcontour2 : evaluatedsegments ) {
@@ -272,9 +223,9 @@ void ConstructFromSegments(const  std::vector<EvaluatedContour>& evaluatedsegmen
 			if ((angledifference1 < lanedetectconstants::ksegmentsanglewindow) &&
 				(angledifference2 < lanedetectconstants::ksegmentsanglewindow) &&
 				(angledifference3 < lanedetectconstants::ksegmentsanglewindow)) {
-				std::vector<cv::Point> newcontour{ *segcontour1.contour };
-				newcontour.insert( newcontour.end(), segcontour2.contour->begin(),
-					segcontour2.contour->end() );
+				Contour newcontour{ segcontour1.contour };
+				newcontour.insert( newcontour.end(), segcontour2.contour.begin(),
+					segcontour2.contour.end() );
 				constructedcontours.push_back( newcontour );
 			}
 		}
@@ -284,14 +235,15 @@ void ConstructFromSegments(const  std::vector<EvaluatedContour>& evaluatedsegmen
 
 /*****************************************************************************************/
 void SortContours( const std::vector<EvaluatedContour>& evaluatedsegments,
-	const int imagewidth, std::vector<EvaluatedContour>& leftcontours,
-	std::vector<EvaluatedContour>& rightcontours )
+                   const int imagewidth,
+				   std::vector<EvaluatedContour>& leftcontours,
+				   std::vector<EvaluatedContour>& rightcontours )
 {
 	for ( const EvaluatedContour &evaluatedcontour : evaluatedsegments ) {
 		//Filter by length (ellipse vs segment?)
 		if ( evaluatedcontour.ellipse.size.height < lanedetectconstants::kellipseheight )
 			continue;
-		//if ( *evaluatedcontour.contour.arcLength(contour, false) <
+		//if ( evaluatedcontour.contour.arcLength(contour, false) <
 		//	lanedetectconstants::klength ) continue;
 		//Filter by angle
 		if ( abs(evaluatedcontour.angle - 90.0) >
@@ -311,8 +263,9 @@ void SortContours( const std::vector<EvaluatedContour>& evaluatedsegments,
 }
 
 /*****************************************************************************************/
-void FindPolygon( Polygon& polygon, const std::vector<cv::Point>& leftcontour,
-	const std::vector<cv::Point>& rightcontour )
+void FindPolygon( Polygon& polygon,
+                  const Contour& leftcontour,
+				  const Contour& rightcontour )
 {
 	//Check for valid contours to prevent exception
 	if ( leftcontour.empty() || rightcontour.empty() ) {
@@ -367,8 +320,10 @@ void FindPolygon( Polygon& polygon, const std::vector<cv::Point>& leftcontour,
 }
 
 /*****************************************************************************************/
-double ScoreContourPair( const Polygon& polygon, const int imagewidth,
-	const EvaluatedContour& leftcontour, const EvaluatedContour& rightcontour )
+double ScoreContourPair( const Polygon& polygon,
+                         const int imagewidth,
+						 const EvaluatedContour& leftcontour,
+						 const EvaluatedContour& rightcontour )
 {
 	//Filter by common angle
 	double deviationangle{ 180.0 - leftcontour.angle -
@@ -393,8 +348,10 @@ double ScoreContourPair( const Polygon& polygon, const int imagewidth,
 }
 
 /*****************************************************************************************/
-void AveragePolygon ( Polygon& polygon, std::deque<Polygon>& pastpolygons,
-	int samplestoaverage, int samplestokeep )
+void AveragePolygon ( Polygon& polygon,
+                      std::deque<Polygon>& pastpolygons,
+					  int samplestoaverage,
+					  int samplestokeep )
 {
 	//FIFO
 	pastpolygons.push_back( polygon );
@@ -438,7 +395,9 @@ void AveragePolygon ( Polygon& polygon, std::deque<Polygon>& pastpolygons,
 			differencefromaverage } );
 	}
 	//Sort
-	sort(polygondifferences.begin(), polygondifferences.end(), ComparePolygons);
+	sort(polygondifferences.begin(), polygondifferences.end(), [](
+		const PolygonDifferences& a, const PolygonDifferences& b ) {
+		return a.differencefromaverage < b.differencefromaverage; });
 	//Sum closest values
 	averagepolygon = { cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
 		cv::Point(0,0) };
@@ -456,11 +415,4 @@ void AveragePolygon ( Polygon& polygon, std::deque<Polygon>& pastpolygons,
 	std::copy(std::begin(averagepolygon), std::end(averagepolygon),
 		std::begin(polygon));
 	return;
-}
-
-/*****************************************************************************************/
-bool ComparePolygons(const PolygonDifferences& a, const PolygonDifferences& b)
-{
-    // smallest comes first
-    return a.differencefromaverage < b.differencefromaverage;
 }
