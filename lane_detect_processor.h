@@ -13,8 +13,6 @@ struct EvaluatedContour {
     cv::RotatedRect ellipse;
     float lengthwidthratio;
 	float angle;
-	//cv::Moments moment;
-	//cv::Point center;
     cv::Vec4f fitline;
 };
 
@@ -38,7 +36,8 @@ void FindPolygon( Polygon& polygon,
 				  const Contour& leftcontour,
 				  const Contour& rightcontour );
 double ScoreContourPair( const Polygon& polygon,
-						 const int imagewidth,
+                         const int imagewidth,
+						 const int imageheight,
 						 const EvaluatedContour& leftcontour,
 						 const EvaluatedContour& rightcontour );
 void AveragePolygon ( Polygon& polygon,

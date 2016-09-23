@@ -16,33 +16,24 @@
 #include "lane_detect_processor.h"
 
 namespace lanedetectconstants {
-
-	//Segment filters
-	uint16_t ksegmentellipseheight{5};
-	float ksegmentanglewindow{134.0f};
-	float ksegmentlengthwidthratio{1.77f};
 	
-	//Construct from segments filters
-	float ksegmentsanglewindow{23.4f};
-	
-	//Final contour filters
-	//uint16_t klength{100};
-	uint16_t kellipseheight{20};
-	float kanglewindow{85.4f};
-	float klengthwidthratio{12.88f};
-	
-	//Scoring variables
-    double kcommonanglewindow = 34.2;
-    uint16_t kminroadwidth = 326.0;
-    uint16_t kmaxroadwidth = 652.0;
-	uint16_t koptimumwidth = 466;
-	//weighting for best grade
-	double klengthweight = 3.8;
-	double kangleweight = -5.3;
-	double kcenteredweight = -4.6;
-	double kwidthweight = 0.4;		//-1.0;
-	double klowestpointweight = 0.7;	//-0.25;	//Should be higher but I have bad test videos
-	double klowestscorelimit = -DBL_MAX;
+	uint16_t ksegmentellipseheight{10};
+	float ksegmentanglewindow{89.0f};
+	float ksegmentlengthwidthratio{2.04f};
+	float ksegmentsanglewindow{45.0f};
+	uint16_t kellipseheight{21};
+	float kanglewindow{78.2f};
+	float klengthwidthratio{5.92f};
+    double kcommonanglewindow{33.3};
+    uint16_t kminroadwidth {303};
+    uint16_t kmaxroadwidth {628};
+	uint16_t koptimumwidth {400};
+	double kellipseratioweight{1.3};
+	double kangleweight{-2.2};
+	double kcenteredweight{-1.0};
+	double kwidthweight{-2.0};
+	double klowestpointweight{-1.0};
+	double klowestscorelimit{-DBL_MAX};
 	
 }
 
@@ -129,8 +120,8 @@ void ProcessImage ( cv::Mat image,
 			//If invalid polygon created, goto next
 			if ( newpolygon[0] == cv::Point(0,0) ) continue;
 			//If valid score
-			double score{ ScoreContourPair( newpolygon, image.cols, leftevaluatedontour,
-				rightevaluatedcontour) };
+			double score{ ScoreContourPair( newpolygon, image.cols, image.rows,
+				leftevaluatedontour, rightevaluatedcontour) };
 			//If highest score update
 			if ( score > maxscore ) {
 				leftcontour = leftevaluatedontour.contour;
@@ -322,6 +313,7 @@ void FindPolygon( Polygon& polygon,
 /*****************************************************************************************/
 double ScoreContourPair( const Polygon& polygon,
                          const int imagewidth,
+						 const int imageheight,
 						 const EvaluatedContour& leftcontour,
 						 const EvaluatedContour& rightcontour )
 {
@@ -335,15 +327,15 @@ double ScoreContourPair( const Polygon& polygon,
 	if ( roadwidth > lanedetectconstants::kmaxroadwidth ) return (-DBL_MAX);
 	//Calculate score
 	double weightedscore(0.0);
-	weightedscore += lanedetectconstants::klengthweight * (
-		leftcontour.ellipse.size.height + rightcontour.ellipse.size.height);
+	weightedscore += lanedetectconstants::kellipseratioweight * (
+		leftcontour.lengthwidthratio + rightcontour.lengthwidthratio);
 	weightedscore += lanedetectconstants::kangleweight * abs(deviationangle);
 	weightedscore += lanedetectconstants::kcenteredweight * (
 		abs(imagewidth - polygon[0].x - polygon[1].x));
 	weightedscore += lanedetectconstants::kwidthweight * (
-		abs(lanedetectconstants::koptimumwidth -(polygon[0].x - polygon[1].x)));
+		abs(lanedetectconstants::koptimumwidth -(polygon[1].x - polygon[0].x)));
 	weightedscore += lanedetectconstants::klowestpointweight * (
-		imagewidth - polygon[0].x);
+		imageheight - polygon[0].y);
 	return weightedscore;
 }
 
