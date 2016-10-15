@@ -268,6 +268,8 @@ void FindPolygon( Polygon& polygon,
     int maxy{std::max(minmaxyleft.second->y, minmaxyright.second->y)};
 	int miny{std::max(minmaxyleft.first->y, minmaxyright.first->y)};
 	
+	std::cout << "Mins and maxes: " << leftmaxx << "," << leftmaxy << "," << rightmaxx << "," << rightmaxy << "," << maxy << "," << miny << std::endl;
+	
 	//Define slopes
 	double leftslope{ static_cast<double>(leftmaxy-leftminy)/static_cast<double>(
 		leftmaxx - leftminx) };
@@ -275,7 +277,11 @@ void FindPolygon( Polygon& polygon,
 		rightmaxx - rightminx) };
     cv::Point leftcenter = cv::Point((leftmaxx + leftminx)/2.0,(leftmaxy + leftminy)/2.0);
     cv::Point rightcenter = cv::Point((rightmaxx + rightminx)/2.0,(rightmaxy + rightminy)/2.0);
+	
+	std::cout << "Slopes and centers: " << leftslope << "-" << leftcenter.x << "," << leftcenter.y << " " << rightslope << "-" << rightcenter.x << "," << rightcenter.y << std::endl;
 
+	std::cout << "Slope status: " << (std::fpclassify(leftslope) == 1024) << " & " << (std::fpclassify(rightslope) == 1024) << std::endl;
+	
 	//If valid slopes found, calculate 4 vertices of the polygon
     if ( (std::fpclassify(leftslope) == 1024) && (std::fpclassify(rightslope) == 1024) ){
         //Calculate points
