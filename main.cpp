@@ -66,10 +66,12 @@ int main(int argc,char *argv[])
 		return 0;
 	}
 	
+	//cv::namedWindow("Canny", CV_WINDOW_NORMAL );
+	cv::namedWindow("Output", CV_WINDOW_NORMAL );
 	//Create cheap log file
-	std::ofstream out("log.txt");
-    std::streambuf *coutbuf = std::cout.rdbuf();
-    std::cout.rdbuf(out.rdbuf());
+	//std::ofstream out("log.txt");
+    //std::streambuf *coutbuf = std::cout.rdbuf();
+    //std::cout.rdbuf(out.rdbuf());
 
 	for (int i = 1; i < argc; i++ ) {
 		VideoCapture capture(argv[i]);
@@ -95,9 +97,11 @@ int main(int argc,char *argv[])
 			//Get frame
 			frames++;
 			capture >> frame;
-
+			
+			std::cout << "Frame #" << i << std::endl;
+			cv::Mat procesimage {frame.clone()};
 			Polygon polygon { cv::Point(0,0) };
-			ProcessImage( frame, polygon );
+			ProcessImage( procesimage, polygon );
 			AveragePolygon ( polygon,  polygons, 3, 5);
 			std::vector<cv::Point> vecpolygon;
 			vecpolygon.push_back(polygon[3]);
@@ -107,19 +111,23 @@ int main(int argc,char *argv[])
 			int timeposition{static_cast<int>((i/capture.get(CAP_PROP_FPS)))};
 			cout << to_string(timeposition) << "s ";
 			PrintLanes(polygon);
-			
-			//Overlay lanes
-			cv::Mat polygonimage{ frame.size(), frame.type(), cv::Scalar(0) };
-			cv::Point newpolygon[4];
-			std::copy( polygon.begin(), polygon.end(), newpolygon );
-			cv::fillConvexPoly( polygonimage, newpolygon, 4, Scalar(0,255,0,127) );
-			overlayImage( &polygonimage, &frame, 0.5);
 
+			//Overlay lanes
+			if ( polygon[0] != cv::Point(0,0) ) {
+				std::cout << "Lanes found!" << std::endl;
+				cv::Mat polygonimage{ frame.size(), frame.type(), cv::Scalar(0) };
+				cv::Point newpolygon[4];
+				std::copy( polygon.begin(), polygon.end(), newpolygon );
+				cv::fillConvexPoly( polygonimage, newpolygon, 4, Scalar(0,255,0,127) );
+				overlayImage( &polygonimage, &frame, 0.5);
+			}
+			
 			double percent = 100*i/capture.get(CAP_PROP_FRAME_COUNT);
 			if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
-			//imshow("w", frame);
-			//waitKey(0); // waits to display frame
+			std::cout << "----------------------------------------------------------" << std::endl;
+			imshow("Output", frame);
+			waitKey(0); // waits to display frame
 			//if ( frames >= 300) break;
 
 		}
@@ -128,7 +136,7 @@ int main(int argc,char *argv[])
 		cout << "Completed, it took " << to_string(spd) << " ms per frame.";
 		output.release();
 	}
-		std::cout.rdbuf(coutbuf); //reset to standard output again
+		//std::cout.rdbuf(coutbuf); //reset to standard output again
 }
 
 

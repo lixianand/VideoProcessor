@@ -7,9 +7,6 @@
 
 //3rd party libraries
 #include "opencv2/core/core.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/features2d/features2d.hpp"
 
 //project libraries
 #include "lane_detect_constants.h"
@@ -38,9 +35,8 @@ namespace lanedetectconstants {
 }
 
 //Main function
-void ProcessImage ( cv::Mat image,
+void ProcessImage ( cv::Mat& image,
                     Polygon& polygon )
-//void ProcessImage ( cv::Mat image, cv::Mat& cannyimage, Polygon& polygon )
 {
 //-----------------------------------------------------------------------------------------
 //Image manipulation
@@ -63,12 +59,13 @@ void ProcessImage ( cv::Mat image,
     std::vector<cv::Vec4i> detectedhierarchy;
     cv::findContours( image, detectedcontours, detectedhierarchy,
 		CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
+	//cv::imshow("Canny", image);
+	//cv::waitKey(0);
+	std::cout << "Contours found: " << detectedcontours.size() << std::endl;
 	//Contours removed by position in function
 
 	//ToDo - There's way more I could be doing:
 		//Dilate?
-		//HoughLineP evaluation?
-		//LSDDetector?
 		
 //-----------------------------------------------------------------------------------------
 //Evaluate contours
@@ -88,6 +85,7 @@ void ProcessImage ( cv::Mat image,
 //-----------------------------------------------------------------------------------------	
     std::vector<std::vector<cv::Point>> constructedcontours;
 	ConstructFromSegments( evaluatedchildsegments, constructedcontours );
+	std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
 
 //-----------------------------------------------------------------------------------------
 //Evaluate constructed segments
@@ -102,7 +100,9 @@ void ProcessImage ( cv::Mat image,
 	std::vector<EvaluatedContour> leftcontours;
 	std::vector<EvaluatedContour> rightcontours;
 	SortContours( evaluatedparentsegments, image.cols, leftcontours, rightcontours );
+	std::cout << "Left pairs: " << leftcontours.size() << std::endl;
 	SortContours( evaluatedchildsegments, image.cols, leftcontours, rightcontours );
+	std::cout << "Right pairs: " << rightcontours.size() << std::endl;
 	
 //-----------------------------------------------------------------------------------------
 //Find highest scoring pair of contours
@@ -144,21 +144,6 @@ void ProcessImage ( cv::Mat image,
 	}
 }
 
-/*****************************************************************************************/	
-void CreateKeypoints( const std::vector<Contour>& contours,
-                      std::vector<cv::KeyPoint>& keypoints )
-{
-	for ( const Contour &contour : contours ) {
-		//Get contour moment
-		cv::Moments moment{ cv::moments( contour, false ) };
-		//Push into keypoint vector
-		keypoints.push_back( cv::KeyPoint{ static_cast<float>(moment.m10/moment.m00),
-		static_cast<float>(moment.m01/moment.m00), static_cast<float>
-			(cv::contourArea(contour)) } );
-	}
-	return;
-}
-	
 /*****************************************************************************************/	
 void EvaluateSegment( const Contour& contour,
                       const int imageheight,

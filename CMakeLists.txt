@@ -12,6 +12,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 #message( STATUS "OPENCV DIRECTORY: " ${OpenCV_INCLUDE_DIRS})
 #message( STATUS "OPENCV LIBRARIES: " ${OpenCV_LIBS})
 add_executable (main main.cpp)
-target_link_libraries(main	${OpenCV_LIBS})
-target_link_libraries (main LaneDetectLibraries )
+target_link_libraries(main
+		${OpenCV_LIBS}
+		LaneDetectLibraries)
 #####################################
