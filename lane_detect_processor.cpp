@@ -111,17 +111,25 @@ void ProcessImage ( cv::Mat& image,
 	double maxscore{lanedetectconstants::klowestscorelimit};
 	Contour leftcontour;
 	Contour rightcontour;
+	int pairnumber { 0 };
+	std::cout << "Scoring pairs..." << std::endl;
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
+			std::cout << "Pair number: " << ++pairnumber << std::endl;
 			Polygon newpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
 				cv::Point(0,0) };
 			FindPolygon( newpolygon, leftevaluatedontour.contour,
 				rightevaluatedcontour.contour );
 			//If invalid polygon created, goto next
-			if ( newpolygon[0] == cv::Point(0,0) ) continue;
+			if ( newpolygon[0] == cv::Point(0,0) ) {
+				std::cout << "No polygon found!" << std::endl;
+				continue;
+			}
+			std::cout << "Polygon found!" << std::endl;
 			//If valid score
 			double score{ ScoreContourPair( newpolygon, image.cols, image.rows,
 				leftevaluatedontour, rightevaluatedcontour) };
+			std::cout << "Score: " << score << std::endl;
 			//If highest score update
 			if ( score > maxscore ) {
 				leftcontour = leftevaluatedontour.contour;
