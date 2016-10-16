@@ -61,7 +61,7 @@ void ProcessImage ( cv::Mat& image,
 		CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
 	//cv::imshow("Canny", image);
 	//cv::waitKey(0);
-	std::cout << "Contours found: " << detectedcontours.size() << std::endl;
+	//std::cout << "Contours found: " << detectedcontours.size() << std::endl;
 	//Contours removed by position in function
 
 	//ToDo - There's way more I could be doing:
@@ -85,7 +85,7 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
     std::vector<std::vector<cv::Point>> constructedcontours;
 	ConstructFromSegments( evaluatedchildsegments, constructedcontours );
-	std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
+	//std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
 
 //-----------------------------------------------------------------------------------------
 //Evaluate constructed segments
@@ -100,9 +100,9 @@ void ProcessImage ( cv::Mat& image,
 	std::vector<EvaluatedContour> leftcontours;
 	std::vector<EvaluatedContour> rightcontours;
 	SortContours( evaluatedparentsegments, image.cols, leftcontours, rightcontours );
-	std::cout << "Left pairs: " << leftcontours.size() << std::endl;
+	//std::cout << "Left pairs: " << leftcontours.size() << std::endl;
 	SortContours( evaluatedchildsegments, image.cols, leftcontours, rightcontours );
-	std::cout << "Right pairs: " << rightcontours.size() << std::endl;
+	//std::cout << "Right pairs: " << rightcontours.size() << std::endl;
 	
 //-----------------------------------------------------------------------------------------
 //Find highest scoring pair of contours
@@ -112,24 +112,24 @@ void ProcessImage ( cv::Mat& image,
 	Contour leftcontour;
 	Contour rightcontour;
 	int pairnumber { 0 };
-	std::cout << "Scoring pairs..." << std::endl;
+	//std::cout << "Scoring pairs..." << std::endl;
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
-			std::cout << "Pair number: " << ++pairnumber << std::endl;
+			//std::cout << "Pair number: " << ++pairnumber << std::endl;
 			Polygon newpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
 				cv::Point(0,0) };
 			FindPolygon( newpolygon, leftevaluatedontour.contour,
 				rightevaluatedcontour.contour );
 			//If invalid polygon created, goto next
 			if ( newpolygon[0] == cv::Point(0,0) ) {
-				std::cout << "No polygon found!" << std::endl;
+				//std::cout << "No polygon found!" << std::endl;
 				continue;
 			}
-			std::cout << "Polygon found!" << std::endl;
+			//std::cout << "Polygon found!" << std::endl;
 			//If valid score
 			double score{ ScoreContourPair( newpolygon, image.cols, image.rows,
 				leftevaluatedontour, rightevaluatedcontour) };
-			std::cout << "Score: " << score << std::endl;
+			//std::cout << "Score: " << score << std::endl;
 			//If highest score update
 			if ( score > maxscore ) {
 				leftcontour = leftevaluatedontour.contour;
@@ -268,7 +268,7 @@ void FindPolygon( Polygon& polygon,
     int maxy{std::max(minmaxyleft.second->y, minmaxyright.second->y)};
 	int miny{std::max(minmaxyleft.first->y, minmaxyright.first->y)};
 	
-	std::cout << "Mins and maxes: " << leftmaxx << "," << leftmaxy << "," << rightmaxx << "," << rightmaxy << "," << maxy << "," << miny << std::endl;
+	//std::cout << "Mins and maxes: " << leftmaxx << "," << leftmaxy << "," << rightmaxx << "," << rightmaxy << "," << maxy << "," << miny << std::endl;
 	
 	//Define slopes
 	double leftslope{ static_cast<double>(leftmaxy-leftminy)/static_cast<double>(
@@ -278,12 +278,12 @@ void FindPolygon( Polygon& polygon,
     cv::Point leftcenter = cv::Point((leftmaxx + leftminx)/2.0,(leftmaxy + leftminy)/2.0);
     cv::Point rightcenter = cv::Point((rightmaxx + rightminx)/2.0,(rightmaxy + rightminy)/2.0);
 	
-	std::cout << "Slopes and centers: " << leftslope << "-" << leftcenter.x << "," << leftcenter.y << " " << rightslope << "-" << rightcenter.x << "," << rightcenter.y << std::endl;
+	//std::cout << "Slopes and centers: " << leftslope << "-" << leftcenter.x << "," << leftcenter.y << " " << rightslope << "-" << rightcenter.x << "," << rightcenter.y << std::endl;
 
-	std::cout << "Slope status: " << (std::fpclassify(leftslope) == 1024) << " & " << (std::fpclassify(rightslope) == 1024) << std::endl;
-	
+	//std::cout << "Slope status: " << (std::fpclassify(leftslope) == 1024) << " & " << (std::fpclassify(rightslope) == 1024) << std::endl;
+	//std::cout << FP_NORMAL << std::endl;
 	//If valid slopes found, calculate 4 vertices of the polygon
-    if ( (std::fpclassify(leftslope) == 1024) && (std::fpclassify(rightslope) == 1024) ){
+    if ( (std::fpclassify(leftslope) == FP_NORMAL) && (std::fpclassify(rightslope) == FP_NORMAL) ){
         //Calculate points
         cv::Point bottomleft = cv::Point(leftcenter.x +
 			(maxy - leftcenter.y)/leftslope, maxy);

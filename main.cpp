@@ -69,9 +69,9 @@ int main(int argc,char *argv[])
 	//cv::namedWindow("Canny", CV_WINDOW_NORMAL );
 	cv::namedWindow("Output", CV_WINDOW_NORMAL );
 	//Create cheap log file
-	//std::ofstream out("log.txt");
-    //std::streambuf *coutbuf = std::cout.rdbuf();
-    //std::cout.rdbuf(out.rdbuf());
+	std::ofstream out("log.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf();
+    std::cout.rdbuf(out.rdbuf());
 
 	for (int i = 1; i < argc; i++ ) {
 		VideoCapture capture(argv[i]);
@@ -98,7 +98,7 @@ int main(int argc,char *argv[])
 			frames++;
 			capture >> frame;
 			
-			std::cout << "Frame #" << i << std::endl;
+			//std::cout << "Frame #" << i << std::endl;
 			cv::Mat procesimage {frame.clone()};
 			Polygon polygon { cv::Point(0,0) };
 			ProcessImage( procesimage, polygon );
@@ -114,7 +114,7 @@ int main(int argc,char *argv[])
 
 			//Overlay lanes
 			if ( polygon[0] != cv::Point(0,0) ) {
-				std::cout << "Lanes found!" << std::endl;
+				//std::cout << "Lanes found!" << std::endl;
 				cv::Mat polygonimage{ frame.size(), frame.type(), cv::Scalar(0) };
 				cv::Point newpolygon[4];
 				std::copy( polygon.begin(), polygon.end(), newpolygon );
@@ -125,7 +125,7 @@ int main(int argc,char *argv[])
 			double percent = 100*i/capture.get(CAP_PROP_FRAME_COUNT);
 			if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
-			std::cout << "----------------------------------------------------------" << std::endl;
+			//std::cout << "----------------------------------------------------------" << std::endl;
 			imshow("Output", frame);
 			waitKey(0); // waits to display frame
 			//if ( frames >= 300) break;
@@ -136,7 +136,7 @@ int main(int argc,char *argv[])
 		cout << "Completed, it took " << to_string(spd) << " ms per frame.";
 		output.release();
 	}
-		//std::cout.rdbuf(coutbuf); //reset to standard output again
+		std::cout.rdbuf(coutbuf); //reset to standard output again
 }
 
 
