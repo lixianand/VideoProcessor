@@ -17,7 +17,12 @@ using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 
-string RenameOutputFile (const string& str);
+string RenameOutputFile (const string& str)
+{
+  size_t foundslash = str.find_last_of("/\\");
+  size_t founddot = str.find_last_of(".");  
+  return str.substr(foundslash + 1, (founddot - foundslash - 1)) + "_edit.avi";
+}
 
 void PrintLanes(Polygon& polygon) {
 	if (polygon[0] == cv::Point(0,0)) { cout << endl; return; }
@@ -137,12 +142,4 @@ int main(int argc,char *argv[])
 		output.release();
 	}
 		std::cout.rdbuf(coutbuf); //reset to standard output again
-}
-
-
-string RenameOutputFile (const string& str)
-{
-  size_t foundslash = str.find_last_of("/\\");
-  size_t founddot = str.find_last_of(".");  
-  return str.substr(foundslash + 1, (founddot - foundslash - 1)) + "_edit.avi";
 }
