@@ -127,7 +127,7 @@ int main(int argc,char *argv[])
 			output << frame;
 			//std::cout << "----------------------------------------------------------" << std::endl;
 			imshow("Output", frame);
-			waitKey(0); // waits to display frame
+			waitKey(1); // waits to display frame
 			//if ( frames >= 300) break;
 
 		}
