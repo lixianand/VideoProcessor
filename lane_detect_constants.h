@@ -1,6 +1,8 @@
 #ifndef LANEDETECTCONSTANTS_H
 #define LANEDETECTCONSTANTS_H
 
+#include "lane_detect_processor.h"
+
 namespace lanedetectconstants {
 	
 	extern uint16_t ksegmentellipseheight;
@@ -27,6 +29,7 @@ namespace lanedetectconstants {
 	extern float kwidthweight;
 	extern float klowestpointweight;
 	extern float klowestscorelimit;
+	extern Polygon optimalpolygon;
 	
 }
 

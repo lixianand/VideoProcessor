@@ -33,6 +33,7 @@ namespace lanedetectconstants {
 	float kwidthweight{-3.0f};
 	float klowestpointweight{-2.0f};
 	float klowestscorelimit{-FLT_MAX};
+	Polygon optimalpolygon{ cv::Point(120,480), cv::Point(520,480), cv::Point(0,300), cv::Point(0,340) };
 	
 }
 
@@ -108,9 +109,17 @@ void ProcessImage ( cv::Mat& image,
 //Find highest scoring pair of contours
 //-----------------------------------------------------------------------------------------	
 	Polygon bestpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0), cv::Point(0,0) };
-	float maxscore{lanedetectconstants::klowestscorelimit};
+	//float maxscore{lanedetectconstants::klowestscorelimit};
+	uint32_t maxscore {0};
 	Contour leftcontour;
 	Contour rightcontour;
+	//Create optimal polygon mat
+	cv::Mat optimalmat{ cv::Mat(image.rows, image.cols, CV_8UC1,
+		cv::Scalar(0)) };
+	cv::Point cvpointarray[4];
+	std::copy( lanedetectconstants::optimalpolygon.begin(),
+		lanedetectconstants::optimalpolygon.end(), cvpointarray );
+	cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(255) );
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
 			Polygon newpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
@@ -120,8 +129,9 @@ void ProcessImage ( cv::Mat& image,
 			//If invalid polygon created, goto next
 			if ( newpolygon[0] == cv::Point(0,0) ) continue;
 			//If valid score
-			float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
-				leftevaluatedontour, rightevaluatedcontour) };
+			//float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
+			//	leftevaluatedontour, rightevaluatedcontour) };
+			uint32_t score = ScorePolygon(newpolygon, optimalmat);
 			//If highest score update
 			if ( score > maxscore ) {
 				leftcontour = leftevaluatedontour.contour;
@@ -322,6 +332,23 @@ float ScoreContourPair( const Polygon& polygon,
 	weightedscore += lanedetectconstants::klowestpointweight * (
 		imageheight - polygon[0].y);
 	return weightedscore;
+}
+
+/*****************************************************************************************/
+uint32_t ScorePolygon( const Polygon& polygon,
+					   const cv::Mat& optimalmat )
+{
+	//Create blank mats
+	cv::Mat polygonmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
+	cv::Mat resultmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
+	
+	//Draw polygon
+	cv::Point cvpointarray[4];
+	std::copy( polygon.begin(),	polygon.end(), cvpointarray );
+	cv::fillConvexPoly( polygonmat, cvpointarray, 4,  cv::Scalar(255) );
+
+	cv::bitwise_and(polygonmat, optimalmat, resultmat);
+	return countNonZero(resultmat);
 }
 
 /*****************************************************************************************/
