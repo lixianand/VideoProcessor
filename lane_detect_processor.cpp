@@ -110,7 +110,7 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
 	Polygon bestpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0), cv::Point(0,0) };
 	//float maxscore{lanedetectconstants::klowestscorelimit};
-	uint32_t maxscore { 0 };
+	int32_t maxscore { 0 };
 	Contour leftcontour;
 	Contour rightcontour;
 	//Create optimal polygon mat
@@ -131,7 +131,7 @@ void ProcessImage ( cv::Mat& image,
 			//If valid score
 			//float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
 			//	leftevaluatedontour, rightevaluatedcontour) };
-			uint32_t score = ScorePolygon(newpolygon, optimalmat);
+			int32_t score = ScorePolygon(newpolygon, optimalmat);
 			//If highest score update
 			if ( score > maxscore ) {
 				leftcontour = leftevaluatedontour.contour;
@@ -335,7 +335,7 @@ float ScoreContourPair( const Polygon& polygon,
 }
 
 /*****************************************************************************************/
-uint32_t ScorePolygon( const Polygon& polygon,
+int32_t ScorePolygon( const Polygon& polygon,
 					   const cv::Mat& optimalmat )
 {
 	//Create blank mats
@@ -349,12 +349,12 @@ uint32_t ScorePolygon( const Polygon& polygon,
 
 	//Find overlapped pixels
 	cv::bitwise_and(polygonmat, optimalmat, resultmat);
-	uint32_t overlappedpixels { countNonZero(resultmat) };
+	int32_t overlappedpixels { countNonZero(resultmat) };
 	
 	//Find excessive pixels
 	cv::bitwise_not ( optimalmat, resultmat );
 	cv::bitwise_and(polygonmat, resultmat, resultmat);
-	uint32_t excessivepixels { countNonZero(resultmat) };
+	int32_t excessivepixels { countNonZero(resultmat) };
 
 	return overlappedpixels - excessivepixels;
 }
