@@ -33,7 +33,7 @@ namespace lanedetectconstants {
 	float kwidthweight{-3.0f};
 	float klowestpointweight{-2.0f};
 	float klowestscorelimit{-FLT_MAX};
-	Polygon optimalpolygon{ cv::Point(120,480), cv::Point(520,480), cv::Point(0,300), cv::Point(0,340) };
+	Polygon optimalpolygon{ cv::Point(100,400), cv::Point(540,400), cv::Point(340,250), cv::Point(300,250) };
 	
 }
 
@@ -110,7 +110,7 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
 	Polygon bestpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0), cv::Point(0,0) };
 	//float maxscore{lanedetectconstants::klowestscorelimit};
-	uint32_t maxscore {0};
+	uint32_t maxscore { 0 };
 	Contour leftcontour;
 	Contour rightcontour;
 	//Create optimal polygon mat
@@ -347,8 +347,16 @@ uint32_t ScorePolygon( const Polygon& polygon,
 	std::copy( polygon.begin(),	polygon.end(), cvpointarray );
 	cv::fillConvexPoly( polygonmat, cvpointarray, 4,  cv::Scalar(255) );
 
+	//Find overlapped pixels
 	cv::bitwise_and(polygonmat, optimalmat, resultmat);
-	return countNonZero(resultmat);
+	uint32_t overlappedpixels { countNonZero(resultmat) };
+	
+	//Find excessive pixels
+	cv::bitwise_not ( optimalmat, resultmat );
+	cv::bitwise_and(polygonmat, resultmat, resultmat);
+	uint32_t excessivepixels { countNonZero(resultmat) };
+
+	return overlappedpixels - excessivepixels;
 }
 
 /*****************************************************************************************/
