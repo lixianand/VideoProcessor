@@ -107,7 +107,7 @@ int main(int argc,char *argv[])
 			cv::Mat procesimage {frame.clone()};
 			Polygon polygon { cv::Point(0,0) };
 			ProcessImage( procesimage, polygon );
-			AveragePolygon ( polygon,  polygons, 3, 5);
+			//AveragePolygon ( polygon,  polygons, 3, 5);
 			std::vector<cv::Point> vecpolygon;
 			vecpolygon.push_back(polygon[3]);
 			vecpolygon.push_back(polygon[2]);
