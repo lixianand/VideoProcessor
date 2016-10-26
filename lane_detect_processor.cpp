@@ -16,14 +16,15 @@
 
 namespace lanedetectconstants {
 	
-	uint16_t ksegmentellipseheight{10};
-	float ksegmentanglewindow{89.0f};
-	float ksegmentlengthwidthratio{2.04f};
-	float ksegmentsanglewindow{45.0f};
-	uint16_t kellipseheight{21};
-	float kanglewindow{78.2f};
-	float klengthwidthratio{5.92f};
-    float kcommonanglewindow{33.3f};
+	uint16_t ksegmentellipseheight{5};
+	float ksegmentanglewindow{90.0f};
+	float ksegmentlengthwidthratio{1.1f};
+	float ksegmentsanglewindow{90.0f};
+	uint16_t kellipseheight{10};
+	float kanglewindow{90.0f};
+	float klengthwidthratio{1.5f};
+    float kcommonanglewindow{90.0f};
+	//Only effective when scoring contour pairs
     uint16_t kminroadwidth {250};
     uint16_t kmaxroadwidth {450};
 	uint16_t koptimumwidth {350};
@@ -33,6 +34,7 @@ namespace lanedetectconstants {
 	float kwidthweight{-3.0f};
 	float klowestpointweight{-2.0f};
 	float klowestscorelimit{-FLT_MAX};
+	//Only effective when scoring by optimal polygon
 	Polygon optimalpolygon{ cv::Point(100,400), cv::Point(540,400), cv::Point(340,250), cv::Point(300,250) };
 	
 }
@@ -47,7 +49,7 @@ void ProcessImage ( cv::Mat& image,
 	//Change to grayscale
 	cv::cvtColor( image, image, CV_BGR2GRAY );
 	//Blur to reduce noise
-    cv::blur( image, image, cv::Size(3,3) );
+    cv::blur( image, image, cv::Size(2,2) );
 	
 //-----------------------------------------------------------------------------------------
 //Find contours
@@ -56,7 +58,9 @@ void ProcessImage ( cv::Mat& image,
     double otsuthreshval = cv::threshold( image, image, 0, 255,
 		CV_THRESH_BINARY | CV_THRESH_OTSU );
 	//Canny edge detection
-    cv::Canny(image, image, otsuthreshval * 0.5, otsuthreshval );
+	otsuthreshval = 50.0;
+    cv::Canny(image, image, otsuthreshval, 4 * otsuthreshval, 3 );
+    //cv::Canny(image, image, otsuthreshval * 0.5, otsuthreshval );
 	//cv::cvtColor( image, cannyimage, CV_GRAY2BGR );
 	std::vector<Contour> detectedcontours;
     std::vector<cv::Vec4i> detectedhierarchy;
@@ -307,10 +311,10 @@ void FindPolygon( Polygon& polygon,
 
 /*****************************************************************************************/
 float ScoreContourPair( const Polygon& polygon,
-                         const int imagewidth,
-						 const int imageheight,
-						 const EvaluatedContour& leftcontour,
-						 const EvaluatedContour& rightcontour )
+                        const int imagewidth,
+						const int imageheight,
+						const EvaluatedContour& leftcontour,
+						const EvaluatedContour& rightcontour )
 {
 	//Filter by common angle
 	float deviationangle{ 180.0f - leftcontour.angle -
