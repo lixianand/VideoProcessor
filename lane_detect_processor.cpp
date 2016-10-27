@@ -114,16 +114,17 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
 	Polygon bestpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0), cv::Point(0,0) };
 	//float maxscore{lanedetectconstants::klowestscorelimit};
-	int32_t maxscore { 0 };
+	//int32_t maxscore { 0 };
+	int32_t maxscore { -INT32_MAX };
 	Contour leftcontour;
 	Contour rightcontour;
 	//Create optimal polygon mat
-	cv::Mat optimalmat{ cv::Mat(image.rows, image.cols, CV_8UC1,
-		cv::Scalar(0)) };
-	cv::Point cvpointarray[4];
-	std::copy( lanedetectconstants::optimalpolygon.begin(),
-		lanedetectconstants::optimalpolygon.end(), cvpointarray );
-	cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(255) );
+	//cv::Mat optimalmat{ cv::Mat(image.rows, image.cols, CV_8UC1,
+	//	cv::Scalar(0)) };
+	//cv::Point cvpointarray[4];
+	//std::copy( lanedetectconstants::optimalpolygon.begin(),
+	//	lanedetectconstants::optimalpolygon.end(), cvpointarray );
+	//cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(255) );
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
 			Polygon newpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
@@ -135,7 +136,9 @@ void ProcessImage ( cv::Mat& image,
 			//If valid score
 			//float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
 			//	leftevaluatedontour, rightevaluatedcontour) };
-			int32_t score = ScorePolygon(newpolygon, optimalmat);
+			//int32_t score = ScorePolygon(newpolygon, optimalmat);
+			int32_t score = ScorePolygonByPoint(newpolygon,
+				lanedetectconstants::optimalpolygon);
 			//If highest score update
 			if ( score > maxscore ) {
 				leftcontour = leftevaluatedontour.contour;
@@ -361,6 +364,33 @@ int32_t ScorePolygon( const Polygon& polygon,
 	int32_t excessivepixels { countNonZero(resultmat) };
 
 	return overlappedpixels - excessivepixels;
+}
+
+/*****************************************************************************************/
+uint32_t root(int32_t x){
+    int32_t a,b;
+    b     = x;
+    a = x = 0x3f;
+    x     = b/x;
+    a = x = (x+a)>>1;
+    x     = b/x;
+    a = x = (x+a)>>1;
+    x     = b/x;
+    x     = (x+a)>>1;
+    return(x);  
+}
+
+/*****************************************************************************************/
+int32_t ScorePolygonByPoint( const Polygon& polygon,
+							 const Polygon& optimalpolygon )
+{
+	int32_t score {0};
+	for (int i = 0; i < 4; i++) {
+		cv::Point diff { polygon[i] - optimalpolygon[i] };
+		//The literal multiplied by y is to emphasise focus on x
+		score -= root((diff.x * diff.x) + 0.5 * (diff.y * diff.y));
+	}
+	return score;
 }
 
 /*****************************************************************************************/

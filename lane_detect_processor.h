@@ -40,6 +40,8 @@ float ScoreContourPair( const Polygon& polygon,
 						 const EvaluatedContour& rightcontour );
 int32_t ScorePolygon( const Polygon& polygon,
 					  const cv::Mat& optimalmat );
+int32_t ScorePolygonByPoint( const Polygon& polygon,
+							 const Polygon& optimalpolygon );
 void AveragePolygon ( Polygon& polygon,
 					  std::deque<Polygon>& pastpolygons,
 					  int samplestoaverage,
