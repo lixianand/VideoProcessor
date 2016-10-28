@@ -179,7 +179,7 @@ void EvaluateSegment( const Contour& contour,
 	//Create ellipse
 	cv::RotatedRect ellipse{ fitEllipse(contour) };
 	//Filter by screen position
-	if ( ellipse.center.y < (imageheight/3)) return;
+	if ( ellipse.center.y < (imageheight * 0.5f)) return;
 	//Filter by length (ellipse vs segment?)
 	if ( ellipse.size.height < lanedetectconstants::ksegmentellipseheight ) return;
 	//if ( arcLength(contour, false) < lanedetectconstants::ksegmentlength ) return;
