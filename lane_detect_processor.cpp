@@ -49,17 +49,16 @@ void ProcessImage ( cv::Mat& image,
 	//Change to grayscale
 	cv::cvtColor( image, image, CV_BGR2GRAY );
 	//Blur to reduce noise
-    cv::blur( image, image, cv::Size(2,2) );
+    cv::blur( image, image, cv::Size(3,3) );
 	
 //-----------------------------------------------------------------------------------------
 //Find contours
 //-----------------------------------------------------------------------------------------
 	//Auto threshold values for canny edge detection
-    double otsuthreshval = cv::threshold( image, image, 0, 255,
-		CV_THRESH_BINARY | CV_THRESH_OTSU );
+    //double otsuthreshval = cv::threshold( image, image, 0, 255,
+	//	CV_THRESH_BINARY | CV_THRESH_OTSU );
 	//Canny edge detection
-	otsuthreshval = 50.0;
-    cv::Canny(image, image, otsuthreshval, 4 * otsuthreshval, 3 );
+    cv::Canny(image, image, 40, 120, 3 );
     //cv::Canny(image, image, otsuthreshval * 0.5, otsuthreshval );
 	//cv::cvtColor( image, cannyimage, CV_GRAY2BGR );
 	std::vector<Contour> detectedcontours;
@@ -90,13 +89,14 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
     std::vector<std::vector<cv::Point>> constructedcontours;
 	ConstructFromSegments( evaluatedchildsegments, constructedcontours );
+	//ConstructFromSegments( evaluatedparentsegments, constructedcontours );
 	//std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
 
 //-----------------------------------------------------------------------------------------
 //Evaluate constructed segments
 //-----------------------------------------------------------------------------------------	
 	for ( Contour contour : constructedcontours ) {
-		EvaluateSegment( contour, image.rows, evaluatedchildsegments );
+		EvaluateSegment( contour, image.rows, evaluatedparentsegments );
 	}
 	
 //-----------------------------------------------------------------------------------------
@@ -106,7 +106,7 @@ void ProcessImage ( cv::Mat& image,
 	std::vector<EvaluatedContour> rightcontours;
 	SortContours( evaluatedparentsegments, image.cols, leftcontours, rightcontours );
 	//std::cout << "Left pairs: " << leftcontours.size() << std::endl;
-	SortContours( evaluatedchildsegments, image.cols, leftcontours, rightcontours );
+	//SortContours( evaluatedchildsegments, image.cols, leftcontours, rightcontours );
 	//std::cout << "Right pairs: " << rightcontours.size() << std::endl;
 	
 //-----------------------------------------------------------------------------------------
@@ -274,7 +274,8 @@ void FindPolygon( Polygon& polygon,
 		leftmaxy{minmaxyleft.second->y}, leftminy{minmaxyleft.first->y};
 	int rightmaxx{minmaxyright.second->x}, rightminx{minmaxyright.first->x},
 		rightmaxy{minmaxyright.second->y}, rightminy{minmaxyright.first->y};
-    int maxy{std::max(minmaxyleft.second->y, minmaxyright.second->y)};
+    //int maxy{std::max(minmaxyleft.second->y, minmaxyright.second->y)};
+	int maxy{lanedetectconstants::optimalpolygon[0].y};
 	int miny{std::max(minmaxyleft.first->y, minmaxyright.first->y)};
 	
 	//Define slopes
@@ -388,7 +389,7 @@ int32_t ScorePolygonByPoint( const Polygon& polygon,
 	for (int i = 0; i < 4; i++) {
 		cv::Point diff { polygon[i] - optimalpolygon[i] };
 		//The literal multiplied by y is to emphasise focus on x
-		score -= root((diff.x * diff.x) + 0.5 * (diff.y * diff.y));
+		score -= root((diff.x * diff.x) + 0.75 * (diff.y * diff.y));
 	}
 	return score;
 }
