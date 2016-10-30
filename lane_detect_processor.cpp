@@ -13,6 +13,7 @@
 #include "lane_detect_processor.h"
 
 #define INVERSEPI 0.31830988618
+#define POLYGONSCALING 0.05
 
 namespace lanedetectconstants {
 	
