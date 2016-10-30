@@ -355,10 +355,8 @@ float PercentMatch( const Polygon& polygon,
 					const cv::Mat optimalmat )
 {
 	//Create blank mats
-	cv::Mat polygonmat{ cv::Mat(POLYGONSCALING * optimalmat.rows, POLYGONSCALING *
-		optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
-	cv::Mat resultmat{ cv::Mat(POLYGONSCALING * optimalmat.rows, POLYGONSCALING *
-		optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
+	cv::Mat polygonmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
+	cv::Mat resultmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
 	
 	//Draw polygon
 	cv::Point cvpointarray[4];
