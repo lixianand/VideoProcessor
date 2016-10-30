@@ -258,7 +258,8 @@ void SortContours( const std::vector<EvaluatedContour>& evaluatedsegments,
 /*****************************************************************************************/
 void FindPolygon( Polygon& polygon,
                   const Contour& leftcontour,
-				  const Contour& rightcontour )
+				  const Contour& rightcontour,
+				  bool useoptimaly )
 {
 	//Check for valid contours to prevent exception
 	if ( leftcontour.empty() || rightcontour.empty() ) {
@@ -274,8 +275,12 @@ void FindPolygon( Polygon& polygon,
 		leftmaxy{minmaxyleft.second->y}, leftminy{minmaxyleft.first->y};
 	int rightmaxx{minmaxyright.second->x}, rightminx{minmaxyright.first->x},
 		rightmaxy{minmaxyright.second->y}, rightminy{minmaxyright.first->y};
-    //int maxy{std::max(minmaxyleft.second->y, minmaxyright.second->y)};
-	int maxy{lanedetectconstants::optimalpolygon[0].y};
+	int maxy;
+	if (useoptimaly) {
+		maxy = lanedetectconstants::optimalpolygon[0].y;
+	} else {
+		maxy = std::max(minmaxyleft.second->y, minmaxyright.second->y);
+	}
 	int miny{std::max(minmaxyleft.first->y, minmaxyright.first->y)};
 	
 	//Define slopes
@@ -343,8 +348,8 @@ float ScoreContourPair( const Polygon& polygon,
 }
 
 /*****************************************************************************************/
-int32_t ScorePolygon( const Polygon& polygon,
-					   const cv::Mat& optimalmat )
+float PercentMatch( const Polygon& polygon,
+					const cv::Mat optimalmat )
 {
 	//Create blank mats
 	cv::Mat polygonmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
@@ -357,14 +362,17 @@ int32_t ScorePolygon( const Polygon& polygon,
 
 	//Find overlapped pixels
 	cv::bitwise_and(polygonmat, optimalmat, resultmat);
-	int32_t overlappedpixels { countNonZero(resultmat) };
+	int overlappedpixels { countNonZero(resultmat) };
 	
 	//Find excessive pixels
-	cv::bitwise_not ( optimalmat, resultmat );
+	cv::bitwise_not(optimalmat, resultmat);
 	cv::bitwise_and(polygonmat, resultmat, resultmat);
-	int32_t excessivepixels { countNonZero(resultmat) };
+	int excessivepixels { countNonZero(resultmat) };
+	cv::bitwise_not(polygonmat, resultmat);
+	cv::bitwise_and(optimalmat, resultmat, resultmat);
+	excessivepixels += countNonZero(resultmat);
 
-	return overlappedpixels - excessivepixels;
+	return overlappedpixels/(overlappedpixels + excessivepixels);
 }
 
 /*****************************************************************************************/
