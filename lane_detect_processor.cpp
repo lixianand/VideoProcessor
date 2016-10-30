@@ -114,18 +114,20 @@ void ProcessImage ( cv::Mat& image,
 //Find highest scoring pair of contours
 //-----------------------------------------------------------------------------------------	
 	Polygon bestpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0), cv::Point(0,0) };
-	//float maxscore{lanedetectconstants::klowestscorelimit};
+	float maxscore{lanedetectconstants::klowestscorelimit};
 	//int32_t maxscore { 0 };
-	int32_t maxscore { -INT32_MAX };
+	//int32_t maxscore { -INT32_MAX };
 	Contour leftcontour;
 	Contour rightcontour;
 	//Create optimal polygon mat
-	//cv::Mat optimalmat{ cv::Mat(image.rows, image.cols, CV_8UC1,
-	//	cv::Scalar(0)) };
-	//cv::Point cvpointarray[4];
-	//std::copy( lanedetectconstants::optimalpolygon.begin(),
-	//	lanedetectconstants::optimalpolygon.end(), cvpointarray );
-	//cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(255) );
+	cv::Mat optimalmat{ cv::Mat(POLYGONSCALING * image.rows, POLYGONSCALING * image.cols, CV_8UC1,
+		cv::Scalar(0)) };
+	cv::Point cvpointarray[4];
+	for  (int i =0; i < 4; i++ ) {
+		cvpointarray[i] = cv::Point(POLYGONSCALING * lanedetectconstants::optimalpolygon[i].x,
+			POLYGONSCALING * lanedetectconstants::optimalpolygon[i].y);
+	}
+	cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(255) );
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
 			Polygon newpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
@@ -137,9 +139,9 @@ void ProcessImage ( cv::Mat& image,
 			//If valid score
 			//float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
 			//	leftevaluatedontour, rightevaluatedcontour) };
-			//int32_t score = ScorePolygon(newpolygon, optimalmat);
-			int32_t score = ScorePolygonByPoint(newpolygon,
-				lanedetectconstants::optimalpolygon);
+			float score = PercentMatch(newpolygon, optimalmat);
+			//int32_t score = ScorePolygonByPoint(newpolygon,
+			//	lanedetectconstants::optimalpolygon);
 			//If highest score update
 			if ( score > maxscore ) {
 				leftcontour = leftevaluatedontour.contour;
@@ -353,12 +355,17 @@ float PercentMatch( const Polygon& polygon,
 					const cv::Mat optimalmat )
 {
 	//Create blank mats
-	cv::Mat polygonmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
-	cv::Mat resultmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
+	cv::Mat polygonmat{ cv::Mat(POLYGONSCALING * optimalmat.rows, POLYGONSCALING *
+		optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
+	cv::Mat resultmat{ cv::Mat(POLYGONSCALING * optimalmat.rows, POLYGONSCALING *
+		optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
 	
 	//Draw polygon
 	cv::Point cvpointarray[4];
-	std::copy( polygon.begin(),	polygon.end(), cvpointarray );
+	for  (int i =0; i < 4; i++ ) {
+		cvpointarray[i] = cv::Point(POLYGONSCALING * polygon[i].x, POLYGONSCALING *
+			polygon[i].y);
+	}
 	cv::fillConvexPoly( polygonmat, cvpointarray, 4,  cv::Scalar(255) );
 
 	//Find overlapped pixels
