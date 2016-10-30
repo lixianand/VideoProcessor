@@ -140,6 +140,7 @@ void ProcessImage ( cv::Mat& image,
 			//float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
 			//	leftevaluatedontour, rightevaluatedcontour) };
 			float score = PercentMatch(newpolygon, optimalmat);
+			std::cout << score << std::endl;
 			//int32_t score = ScorePolygonByPoint(newpolygon,
 			//	lanedetectconstants::optimalpolygon);
 			//If highest score update
@@ -378,7 +379,7 @@ float PercentMatch( const Polygon& polygon,
 	cv::bitwise_and(optimalmat, resultmat, resultmat);
 	excessivepixels += countNonZero(resultmat);
 
-	return overlappedpixels/(overlappedpixels + excessivepixels);
+	return (100.0 * overlappedpixels) / (overlappedpixels + excessivepixels);
 }
 
 /*****************************************************************************************/
