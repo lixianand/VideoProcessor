@@ -16,15 +16,16 @@
 #define POLYGONSCALING 0.05
 
 namespace lanedetectconstants {
-	
-	uint16_t ksegmentellipseheight{5};
-	float ksegmentanglewindow{90.0f};
-	float ksegmentlengthwidthratio{1.1f};
-	float ksegmentsanglewindow{90.0f};
-	uint16_t kellipseheight{10};
-	float kanglewindow{90.0f};
-	float klengthwidthratio{1.5f};
-    float kcommonanglewindow{90.0f};
+		
+	uint16_t ksegmentellipseheight{8};
+	float ksegmentanglewindow{80.0f};
+	float ksegmentlengthwidthratio{1.8f};
+	float ksegmentsanglewindow{45.0f};
+	uint16_t kellipseheight{30};
+	float kanglewindow{78.2f};
+	float klengthwidthratio{8.00f};
+    float kcommonanglewindow{33.3f};
+	float klowestscorelimit{-FLT_MAX};
 	//Only effective when scoring contour pairs
     uint16_t kminroadwidth {250};
     uint16_t kmaxroadwidth {450};
@@ -34,10 +35,8 @@ namespace lanedetectconstants {
 	float kcenteredweight{-1.0f};
 	float kwidthweight{-3.0f};
 	float klowestpointweight{-2.0f};
-	float klowestscorelimit{-FLT_MAX};
 	//Only effective when scoring by optimal polygon
-	Polygon optimalpolygon{ cv::Point(100,400), cv::Point(540,400), cv::Point(340,250), cv::Point(300,250) };
-	
+	Polygon optimalpolygon{ cv::Point(100,400), cv::Point(540,400), cv::Point(340,250), cv::Point(300,250) };	
 }
 
 //Main function
@@ -120,6 +119,7 @@ void ProcessImage ( cv::Mat& image,
 	Contour leftcontour;
 	Contour rightcontour;
 	//Create optimal polygon mat
+	/*
 	cv::Mat optimalmat{ cv::Mat(POLYGONSCALING * image.rows, POLYGONSCALING * image.cols, CV_8UC1,
 		cv::Scalar(0)) };
 	cv::Point cvpointarray[4];
@@ -127,7 +127,18 @@ void ProcessImage ( cv::Mat& image,
 		cvpointarray[i] = cv::Point(POLYGONSCALING * lanedetectconstants::optimalpolygon[i].x,
 			POLYGONSCALING * lanedetectconstants::optimalpolygon[i].y);
 	}
-	cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(255) );
+	cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(1) );
+	//Find area
+	int a{ cvpointarray[2].x - cvpointarray[3].x };
+	int b{ cvpointarray[1].x - cvpointarray[0].x };
+	int h{ cvpointarray[0].y - cvpointarray[2].y };
+	uint16_t optimalpolygonarea{ 0.5 * (a + b) * h };
+	*/
+	//Find area
+	int a{ lanedetectconstants::optimalpolygon[2].x - lanedetectconstants::optimalpolygon[3].x };
+	int b{ lanedetectconstants::optimalpolygon[1].x - lanedetectconstants::optimalpolygon[0].x };
+	int h{ lanedetectconstants::optimalpolygon[0].y - lanedetectconstants::optimalpolygon[2].y };
+	uint16_t optimalpolygonarea{ 0.5 * (a + b) * h };
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
 			Polygon newpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
@@ -139,8 +150,10 @@ void ProcessImage ( cv::Mat& image,
 			//If valid score
 			//float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
 			//	leftevaluatedontour, rightevaluatedcontour) };
-			float score = PercentMatch(newpolygon, optimalmat);
-			std::cout << score << std::endl;
+			//float score = PercentMatch(newpolygon, optimalmat);
+			//float score = PercentMatch2(newpolygon, optimalmat, optimalpolygonarea);
+			float score = PercentMatch3(newpolygon, lanedetectconstants::optimalpolygon,
+				optimalpolygonarea);
 			//int32_t score = ScorePolygonByPoint(newpolygon,
 			//	lanedetectconstants::optimalpolygon);
 			//If highest score update
@@ -353,11 +366,10 @@ float ScoreContourPair( const Polygon& polygon,
 
 /*****************************************************************************************/
 float PercentMatch( const Polygon& polygon,
-					const cv::Mat optimalmat )
+					const cv::Mat& optimalmat )
 {
-	//Create blank mats
+	//Create blank mat
 	cv::Mat polygonmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
-	cv::Mat resultmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
 	
 	//Draw polygon
 	cv::Point cvpointarray[4];
@@ -365,21 +377,127 @@ float PercentMatch( const Polygon& polygon,
 		cvpointarray[i] = cv::Point(POLYGONSCALING * polygon[i].x, POLYGONSCALING *
 			polygon[i].y);
 	}
-	cv::fillConvexPoly( polygonmat, cvpointarray, 4,  cv::Scalar(255) );
+	cv::fillConvexPoly( polygonmat, cvpointarray, 4,  cv::Scalar(2) );
 
-	//Find overlapped pixels
-	cv::bitwise_and(polygonmat, optimalmat, resultmat);
-	int overlappedpixels { countNonZero(resultmat) };
+	//Add together
+	polygonmat += optimalmat;
 	
-	//Find excessive pixels
-	cv::bitwise_not(optimalmat, resultmat);
-	cv::bitwise_and(polygonmat, resultmat, resultmat);
-	int excessivepixels { countNonZero(resultmat) };
-	cv::bitwise_not(polygonmat, resultmat);
-	cv::bitwise_and(optimalmat, resultmat, resultmat);
-	excessivepixels += countNonZero(resultmat);
+	//Evaluate result
+	uint16_t excessarea{ 0 };
+	uint16_t overlaparea{ 0 };
+    uchar* p;
+	for (int i = 0; i < optimalmat.rows; i++) {
+		p = polygonmat.ptr<uchar>(i);
+		for (int j = 0; j < optimalmat.cols; j++) {
+			switch ( p[j] )
+			{
+				case 1:
+					excessarea++;
+					break;
+				case 2:
+					excessarea++;
+					break;
+				case 3:
+					overlaparea++;
+					break;
+				break;
+			}
+		}
+	}
 
-	return (100.0 * overlappedpixels) / (overlappedpixels + excessivepixels);
+	return (100.0 * overlaparea) / (overlaparea + excessarea);
+}
+
+/*****************************************************************************************/
+float PercentMatch2( const Polygon& polygon,
+					 const cv::Mat& optimalmat,
+					 const uint16_t optimalarea )
+{
+	//Create blank mat
+	cv::Mat polygonmat{ cv::Mat(optimalmat.rows, optimalmat.cols, CV_8UC1, cv::Scalar(0)) };
+	
+	//Draw polygon
+	cv::Point cvpointarray[4];
+	for  (int i =0; i < 4; i++ ) {
+		cvpointarray[i] = cv::Point(POLYGONSCALING * polygon[i].x, POLYGONSCALING *
+			polygon[i].y);
+	}
+	cv::fillConvexPoly( polygonmat, cvpointarray, 4,  cv::Scalar(2) );
+
+	//Find area
+	int a{ cvpointarray[2].x - cvpointarray[3].x };
+	int b{ cvpointarray[1].x - cvpointarray[0].x };
+	int h{ cvpointarray[0].y - cvpointarray[2].y };
+	uint16_t polygonarea{ 0.5 * (a + b) * h };
+	
+	//Add together
+	cv::bitwise_and(polygonmat, optimalmat, polygonmat);
+	uint16_t overlaparea { countNonZero(polygonmat) };
+
+	return (100.0 * overlaparea) / (optimalarea + polygonarea - overlaparea);
+}
+
+/*****************************************************************************************/
+float PercentMatch3( const Polygon& polygon,
+					 const Polygon& optimalpolygon,
+					 const uint16_t optimalarea )
+{
+	//Find area
+	int a{ polygon[2].x - polygon[3].x };
+	int b{ polygon[1].x - polygon[0].x };
+	int h{ polygon[0].y - polygon[2].y };
+	uint16_t polygonarea{ 0.5 * (a + b) * h };
+	
+	//Create overlap polygon
+	Polygon overlappolygon { cv::Point(0,0), cv::Point(0,0), cv::Point(0,0),
+		cv::Point(0,0) };
+	//Point 0
+	if ( optimalpolygon[0].x > polygon[0].x ) {
+		overlappolygon[0].x = optimalpolygon[0].x;
+	} else {
+		overlappolygon[0].x = polygon[0].x;
+	}
+	if ( optimalpolygon[0].y < polygon[0].y ) {
+		overlappolygon[0].y = optimalpolygon[0].y;
+		overlappolygon[1].y = optimalpolygon[0].y;
+	} else {
+		overlappolygon[0].y = polygon[0].y;
+		overlappolygon[1].y = polygon[0].y;
+	}
+	//Point 1
+	if ( optimalpolygon[1].x < polygon[1].x ) {
+		overlappolygon[1].x = optimalpolygon[1].x;
+	} else {
+		overlappolygon[1].x = polygon[1].x;
+	}
+	//Point 2
+	if ( optimalpolygon[2].x < polygon[2].x ) {
+		overlappolygon[2].x = optimalpolygon[2].x;
+	} else {
+		overlappolygon[2].x = polygon[2].x;
+	}
+	if ( optimalpolygon[2].y > polygon[2].y ) {
+		overlappolygon[2].y = optimalpolygon[2].y;
+		overlappolygon[3].y = optimalpolygon[2].y;
+	} else {
+		overlappolygon[2].y = polygon[2].y;
+		overlappolygon[3].y = polygon[2].y;
+	}
+	//Point 3
+	if ( optimalpolygon[3].x > polygon[3].x ) {
+		overlappolygon[3].x = optimalpolygon[3].x;
+	} else {
+		overlappolygon[3].x = polygon[3].x;
+	}
+		
+	
+	//Find area
+	int aovr{ overlappolygon[2].x - overlappolygon[3].x };
+	int bovr{ overlappolygon[1].x - overlappolygon[0].x };
+	int hovr{ overlappolygon[0].y - overlappolygon[2].y };
+	uint16_t overlaparea{ 0.5 * (aovr + bovr) * hovr };
+
+	return (100.0 * overlaparea) / (optimalarea + polygonarea - overlaparea);
 }
 
 /*****************************************************************************************/

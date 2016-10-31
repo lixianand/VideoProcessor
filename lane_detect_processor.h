@@ -40,7 +40,13 @@ float ScoreContourPair( const Polygon& polygon,
 						 const EvaluatedContour& leftcontour,
 						 const EvaluatedContour& rightcontour );
 float PercentMatch( const Polygon& polygon,
-					const cv::Mat optimalmat );
+					const cv::Mat& optimalmat );
+float PercentMatch2( const Polygon& polygon,
+					 const cv::Mat& optimalmat,
+					 const uint16_t optimalarea );
+float PercentMatch3( const Polygon& polygon,
+					 const Polygon& optimalpolygon,
+					 const uint16_t optimalarea );
 int32_t ScorePolygonByPoint( const Polygon& polygon,
 							 const Polygon& optimalpolygon );
 void AveragePolygon ( Polygon& polygon,
