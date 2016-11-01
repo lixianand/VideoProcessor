@@ -389,7 +389,6 @@ float PercentMatch( const Polygon& polygon,
 				case 3:
 					overlaparea++;
 					break;
-				break;
 			}
 		}
 	}
