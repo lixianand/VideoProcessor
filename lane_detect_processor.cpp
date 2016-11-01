@@ -159,8 +159,9 @@ void ProcessImage ( cv::Mat& image,
 			if ( newpolygon[0] == cv::Point(0,0) ) continue;
 			
 			//Score is area matched, multiplied by h/d (favors tall vs wide polygons)
-			float score{ ((newpolygon[0].y - newpolygon[3].y)/(newpolygon[2].x -
-				newpolygon[3].x)) * PercentMatch(newpolygon, optimalmat) };
+			//float score{ ((newpolygon[0].y - newpolygon[3].y)/(newpolygon[2].x -
+			//	newpolygon[3].x)) * PercentMatch(newpolygon, optimalmat) };
+			float score{ PercentMatch(newpolygon, optimalmat) };
 			
 			//If highest score update
 			if ( score > maxscore ) {
