@@ -49,11 +49,12 @@ float PercentMatch3( const Polygon& polygon,
 					 const uint16_t optimalarea );
 int32_t ScorePolygonByPoint( const Polygon& polygon,
 							 const Polygon& optimalpolygon );
-void AveragePolygon ( Polygon& polygon,
-					  std::deque<Polygon>& pastpolygons,
-					  int samplestoaverage,
-					  int samplestokeep );
-void ProcessImage ( cv::Mat& image,
-					Polygon& polygon );
+void AveragePolygon( Polygon& polygon,
+					 std::deque<Polygon>& pastpolygons,
+					 int samplestoaverage,
+					 int samplestokeep );
+void ProcessImage( cv::Mat& image,
+				   Polygon& polygon );
+float FastArcTan( const double slope );
 
 #endif // LANEDETECTPROCESSOR_H

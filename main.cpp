@@ -71,8 +71,7 @@ int main(int argc,char *argv[])
 		return 0;
 	}
 	
-	//cv::namedWindow("Canny", CV_WINDOW_NORMAL );
-	cv::namedWindow("Output", CV_WINDOW_NORMAL );
+	//cv::namedWindow("Output", CV_WINDOW_NORMAL );
 	//Create cheap log file
 	std::ofstream out("log.txt");
     std::streambuf *coutbuf = std::cout.rdbuf();
@@ -114,8 +113,8 @@ int main(int argc,char *argv[])
 			vecpolygon.push_back(polygon[1]);
 			vecpolygon.push_back(polygon[0]);
 			int timeposition{static_cast<int>((i/capture.get(CAP_PROP_FPS)))};
-			cout << to_string(timeposition) << "s ";
-			PrintLanes(polygon);
+			//cout << to_string(timeposition) << "s ";
+			//PrintLanes(polygon);
 
 			//Overlay lanes
 			if ( polygon[0] != cv::Point(0,0) ) {
@@ -128,7 +127,7 @@ int main(int argc,char *argv[])
 			}
 			
 			double percent = 100*i/capture.get(CAP_PROP_FRAME_COUNT);
-			if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
+			//if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
 			//std::cout << "----------------------------------------------------------" << std::endl;
 			imshow("Output", frame);
