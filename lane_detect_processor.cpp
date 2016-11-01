@@ -122,6 +122,8 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
 	Polygon bestpolygon{ cv::Point(0,0), cv::Point(0,0), cv::Point(0,0), cv::Point(0,0) };
 	float maxscore{lanedetectconstants::klowestscorelimit};
+	Contour leftcontour;
+	Contour rightcontour;
 	
 	//Create optimal polygon mat
 	cv::Mat optimalmat{ cv::Mat(POLYGONSCALING * image.rows, POLYGONSCALING * image.cols, CV_8UC1,
@@ -145,14 +147,21 @@ void ProcessImage ( cv::Mat& image,
 			if ( newpolygon[0] == cv::Point(0,0) ) continue;
 			
 			//If valid score
-			float score{ PercentMatch(newpolygon, optimalmat };
+			float score{ PercentMatch(newpolygon, optimalmat) };
 			
 			//If highest score update
 			if ( score > maxscore ) {
+				leftcontour = leftevaluatedontour.contour;
+				rightcontour = rightevaluatedcontour.contour;
 				maxscore = score;
 				bestpolygon = newpolygon;
 			}
 		}
+	}
+	
+	//Set bottom of polygon equal to optimal polygon
+	if ( bestpolygon[0] != cv::Point(0,0) ) {
+		FindPolygon( bestpolygon, leftcontour, rightcontour, true );
 	}
 	
 //-----------------------------------------------------------------------------------------
