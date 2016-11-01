@@ -489,20 +489,6 @@ float PercentMatch3( const Polygon& polygon,
 }
 
 /*****************************************************************************************/
-uint32_t root(int32_t x){
-    int32_t a,b;
-    b     = x;
-    a = x = 0x3f;
-    x     = b/x;
-    a = x = (x+a)>>1;
-    x     = b/x;
-    a = x = (x+a)>>1;
-    x     = b/x;
-    x     = (x+a)>>1;
-    return(x);  
-}
-
-/*****************************************************************************************/
 int32_t ScorePolygonByPoint( const Polygon& polygon,
 							 const Polygon& optimalpolygon )
 {
@@ -510,7 +496,7 @@ int32_t ScorePolygonByPoint( const Polygon& polygon,
 	for (int i = 0; i < 4; i++) {
 		cv::Point diff { polygon[i] - optimalpolygon[i] };
 		//The literal multiplied by y is to emphasise focus on x
-		score -= root((diff.x * diff.x) + 0.75 * (diff.y * diff.y));
+		score -= FastSquareRoot((diff.x * diff.x) + 0.75 * (diff.y * diff.y));
 	}
 	return score;
 }
@@ -583,6 +569,21 @@ void AveragePolygon ( Polygon& polygon,
 	std::copy(std::begin(averagepolygon), std::end(averagepolygon),
 		std::begin(polygon));
 	return;
+}
+
+/*****************************************************************************************/
+uint32_t FastSquareRoot( int32_t x )
+{
+    int32_t a, b;
+    b = x;
+    a = x = 0x3f;
+    x = b / x;
+    a = x = (x + a) >> 1;
+    x = b / x;
+    a = x = (x + a) >> 1;
+    x = b / x;
+    x = (x + a) >> 1;
+    return x;  
 }
 
 /*****************************************************************************************/
