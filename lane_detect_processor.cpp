@@ -132,7 +132,7 @@ void ProcessImage ( cv::Mat& image,
 			POLYGONSCALING * lanedetectconstants::optimalpolygon[i].y);
 	}
 	cv::fillConvexPoly( optimalmat, cvpointarray, 4,  cv::Scalar(1) );
-
+	
 	//Find best score
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
@@ -140,15 +140,13 @@ void ProcessImage ( cv::Mat& image,
 				cv::Point(0,0) };
 			FindPolygon( newpolygon, leftevaluatedontour.contour,
 				rightevaluatedcontour.contour );
+				
 			//If invalid polygon created, goto next
 			if ( newpolygon[0] == cv::Point(0,0) ) continue;
+			
 			//If valid score
-			//float score{ ScoreContourPair( newpolygon, image.cols, image.rows,
-			//	leftevaluatedontour, rightevaluatedcontour) };
-			float score = PercentMatch(newpolygon, optimalmat);
-			//float score = PercentMatch2(newpolygon, optimalmat, optimalpolygonarea);
-			//float score = PercentMatch3(newpolygon, lanedetectconstants::optimalpolygon,
-			//	optimalpolygonarea);
+			float score{ PercentMatch(newpolygon, optimalmat };
+			
 			//If highest score update
 			if ( score > maxscore ) {
 				maxscore = score;

@@ -114,7 +114,7 @@ int main(int argc,char *argv[])
 			vecpolygon.push_back(polygon[0]);
 			int timeposition{static_cast<int>((i/capture.get(CAP_PROP_FPS)))};
 			//cout << to_string(timeposition) << "s ";
-			//PrintLanes(polygon);
+			PrintLanes(polygon);
 
 			//Overlay lanes
 			if ( polygon[0] != cv::Point(0,0) ) {
@@ -130,8 +130,8 @@ int main(int argc,char *argv[])
 			//if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
 			//std::cout << "----------------------------------------------------------" << std::endl;
-			imshow("Output", frame);
-			waitKey(1); // waits to display frame
+			//imshow("Output", frame);
+			//waitKey(1); // waits to display frame
 			//if ( frames >= 300) break;
 
 		}
