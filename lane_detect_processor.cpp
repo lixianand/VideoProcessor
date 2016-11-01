@@ -13,6 +13,7 @@
 #include "lane_detect_constants.h"
 #include "lane_detect_processor.h"
 
+//Preprocessor literals
 #ifndef M_PI
     #define M_PI_4 0.78539816339
 #endif
@@ -23,27 +24,38 @@
 #define POLYGONSCALING 0.1
 
 namespace lanedetectconstants {
-		
-	uint16_t ksegmentellipseheight{6};
-	float ksegmentanglewindow{75.0f};
-	float ksegmentlengthwidthratio{1.6f};
-	float ksegmentsanglewindow{45.0f};
-	uint16_t kellipseheight{25};
-	float kanglewindow{70.0f};
-	float klengthwidthratio{7.00f};
-    float kcommonanglewindow{40.0f};
-	float klowestscorelimit{-FLT_MAX};
-	//Only effective when scoring contour pairs
-    uint16_t kminroadwidth {250};
-    uint16_t kmaxroadwidth {450};
-	uint16_t koptimumwidth {350};
-	float kellipseratioweight{1.3f};
-	float kangleweight{-2.2f};
-	float kcenteredweight{-1.0f};
-	float kwidthweight{-3.0f};
-	float klowestpointweight{-2.0f};
-	//Only effective when scoring by optimal polygon
-	Polygon optimalpolygon{ cv::Point(100,400), cv::Point(540,400), cv::Point(340,250), cv::Point(300,250) };	
+	
+	//Polygon filtering
+	Polygon optimalpolygon{ cv::Point(100,400), cv::Point(540,400),
+		cv::Point(340,250), cv::Point(300,250) };
+	uint16_t koptimumwidth{ static_cast<uint16_t>(optimalpolygon[1].x -
+		optimalpolygon[0].x) };
+	uint16_t kroadwithtolerance{ 60 };
+    uint16_t kminroadwidth{ static_cast<uint16_t>(koptimumwidth - kroadwithtolerance) };
+    uint16_t kmaxroadwidth{ static_cast<uint16_t>(koptimumwidth + kroadwithtolerance) };
+	
+	//Segment filtering
+	uint16_t ksegmentellipseheight{ 6 };	//In terms of pixels, change for flexibility
+	uint16_t kverticalsegmentlimit{ static_cast<uint16_t>(optimalpolygon[2].y) };
+	float ksegmentanglewindow{ 75.0f };
+	float ksegmentlengthwidthratio{ 1.6f };
+	float ksegmentsanglewindow{ 45.0f };
+	
+	//Contour filtering
+	uint16_t kellipseheight{ 25 };			//In terms of pixels, change for flexibility
+	float kanglewindow{ 70.0f };
+	float klengthwidthratio{ 7.00f };
+    float kcommonanglewindow{ 40.0f };
+	
+	//Scoring
+	float klowestscorelimit{ 20.0f };
+	
+	//Only effective when scoring contour pairs (to be removed)
+	float kellipseratioweight{ 1.3f };
+	float kangleweight{ -2.2f };
+	float kcenteredweight{ -1.0f };
+	float kwidthweight{ -3.0f};
+	float klowestpointweight{ -2.0f };
 }
 
 //Main function
@@ -146,8 +158,9 @@ void ProcessImage ( cv::Mat& image,
 			//If invalid polygon created, goto next
 			if ( newpolygon[0] == cv::Point(0,0) ) continue;
 			
-			//If valid score
-			float score{ PercentMatch(newpolygon, optimalmat) };
+			//Score is area matched, multiplied by h/d (favors tall vs wide polygons)
+			float score{ ((newpolygon[0].y - newpolygon[3].y)/(newpolygon[2].x -
+				newpolygon[3].x)) * PercentMatch(newpolygon, optimalmat) };
 			
 			//If highest score update
 			if ( score > maxscore ) {
@@ -185,7 +198,7 @@ void EvaluateSegment( const Contour& contour,
 	cv::RotatedRect ellipse{ fitEllipse(contour) };
 	
 	//Filter by screen position
-	if ( ellipse.center.y < (imageheight * 0.6f)) return;
+	if ( ellipse.center.y < (lanedetectconstants::kverticalsegmentlimit)) return;
 	
 	//Filter by length (ellipse vs segment?)
 	if ( ellipse.size.height < lanedetectconstants::ksegmentellipseheight ) return;
@@ -288,46 +301,73 @@ void FindPolygon( Polygon& polygon,
 		leftmaxy{minmaxyleft.second->y}, leftminy{minmaxyleft.first->y};
 	int rightmaxx{minmaxyright.second->x}, rightminx{minmaxyright.first->x},
 		rightmaxy{minmaxyright.second->y}, rightminy{minmaxyright.first->y};
-	int maxy;
-	if (useoptimaly) {
-		maxy = lanedetectconstants::optimalpolygon[0].y;
-	} else {
-		maxy = std::max(minmaxyleft.second->y, minmaxyright.second->y);
-	}
+	int	maxyoptimal{lanedetectconstants::optimalpolygon[0].y};
+	int maxyactual{std::max(minmaxyleft.second->y, minmaxyright.second->y)};
 	int miny{std::max(minmaxyleft.first->y, minmaxyright.first->y)};
+	int maxy;	
+	if ( useoptimaly ) {
+		maxy = maxyoptimal;
+	} else {
+		maxy = maxyactual;
+	}
 	
 	//Define slopes
-	float leftslope{ static_cast<float>(leftmaxy-leftminy)/static_cast<float>(
-		leftmaxx - leftminx) };
-    float rightslope{ static_cast<float>(rightmaxy-rightminy)/static_cast<float>(
-		rightmaxx - rightminx) };
-    cv::Point leftcenter = cv::Point((leftmaxx + leftminx) * 0.5f,(leftmaxy + leftminy) * 0.5f);
-    cv::Point rightcenter = cv::Point((rightmaxx + rightminx) * 0.5f,(rightmaxy + rightminy) * 0.5f);
+	float leftslope, rightslope;
+	if ((leftmaxx - leftminx) == 0) {
+		leftslope = FLT_MAX;
+	} else {
+		leftslope = static_cast<float>(leftmaxy-leftminy) / static_cast<float>(
+			leftmaxx - leftminx);
+	}
+	if ((rightmaxx - rightminx) == 0) {
+		rightslope = FLT_MAX;
+	} else {
+		rightslope = static_cast<float>(rightmaxy-rightminy) / static_cast<float>(
+			rightmaxx - rightminx);
+	}
 
-	//If valid slopes found, calculate 4 vertices of the polygon
-    if ( (std::fpclassify(leftslope) == FP_NORMAL) && (std::fpclassify(rightslope) == FP_NORMAL) ){
-        //Calculate points
-        cv::Point bottomleft = cv::Point(leftcenter.x +
-			(maxy - leftcenter.y)/leftslope, maxy);
-        cv::Point bottomright = cv::Point(rightcenter.x +
-			(maxy - rightcenter.y)/rightslope, maxy);
-        cv::Point topright = cv::Point(rightcenter.x -
-			(rightcenter.y - miny)/rightslope, miny);
-        cv::Point topleft = cv::Point(leftcenter.x -
-			(leftcenter.y - miny)/leftslope, miny);
-        //Check validity of points
-        if ((((leftslope < 0.0f) && (rightslope > 0.0f)) ||
-            ((leftslope > 0.0f) && (rightslope > 0.0f)) ||
-            ((leftslope < 0.0f) && (rightslope < 0.0f))) &&
-            ((bottomleft.x < bottomright.x) && (topleft.x < topright.x))){
+	//Calculate center points
+    cv::Point leftcenter{ cv::Point((leftmaxx + leftminx) *
+		0.5f,(leftmaxy + leftminy) * 0.5f) };
+    cv::Point rightcenter{ cv::Point((rightmaxx + rightminx) *
+		0.5f,(rightmaxy + rightminy) * 0.5f) };
+	
+	//Calculate optimal bottom points
+	cv::Point bottomleftoptimal{ cv::Point(leftcenter.x +
+		(maxyoptimal - leftcenter.y)/leftslope, maxyoptimal) };
+	cv::Point bottomrightoptimal{ cv::Point(rightcenter.x +
+		(maxyoptimal - rightcenter.y)/rightslope, maxyoptimal) };
+	
+	//Perform filtering based on width of polygon with optimal maxy
+	int roadwidth{ bottomrightoptimal.x - bottomleftoptimal.x };
+	if ( roadwidth < lanedetectconstants::kminroadwidth ) return;
+	if ( roadwidth > lanedetectconstants::kmaxroadwidth ) return;
+	
+	cv::Point topright = cv::Point(rightcenter.x -
+		(rightcenter.y - miny)/rightslope, miny);
+	cv::Point topleft = cv::Point(leftcenter.x -
+		(leftcenter.y - miny)/leftslope, miny);
+		
+	//Check validity of shape
+	if ((((leftslope < 0.0f) && (rightslope > 0.0f)) ||
+		((leftslope > 0.0f) && (rightslope > 0.0f)) ||
+		((leftslope < 0.0f) && (rightslope < 0.0f))) &&
+		((bottomleftoptimal.x < bottomrightoptimal.x) && (topleft.x < topright.x))){
 
-            //Construct polygon
-			polygon[0] = bottomleft;
-			polygon[1] = bottomright;
-			polygon[2] = topright;
-			polygon[3] = topleft;
-        }
-    }
+		//Construct polygon
+		if ( useoptimaly ) {
+			polygon[0] = bottomleftoptimal;
+			polygon[1] = bottomrightoptimal;
+		} else {
+			polygon[0] = cv::Point(leftcenter.x +
+				(maxy - leftcenter.y)/leftslope, maxy);
+			polygon[1] = cv::Point(rightcenter.x +
+				(maxy - rightcenter.y)/rightslope, maxy);
+		}
+		polygon[2] = topright;
+		polygon[3] = topleft;
+	}
+
 	return;
 }
 
@@ -341,11 +381,6 @@ float ScoreContourPair( const Polygon& polygon,
 	//Filter by common angle
 	float deviationangle{ 180.0f - leftcontour.angle -	rightcontour.angle };
 	if ( abs(deviationangle) > lanedetectconstants::kcommonanglewindow ) return (-FLT_MAX);
-	
-	//Filter by road width
-	int roadwidth{ polygon[1].x - polygon[0].x };
-	if ( roadwidth < lanedetectconstants::kminroadwidth ) return (-FLT_MAX);
-	if ( roadwidth > lanedetectconstants::kmaxroadwidth ) return (-FLT_MAX);
 	
 	//Calculate score
 	float weightedscore{ 0.0f };
