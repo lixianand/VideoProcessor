@@ -15,13 +15,13 @@ namespace lanedetectconstants {
 	//Segment filtering
 	extern uint16_t ksegmentellipseheight;
 	extern uint16_t kverticalsegmentlimit;
-	extern float ksegmentanglewindow;
+	extern float ksegmentminimumangle;
 	extern float ksegmentlengthwidthratio;
 	extern float ksegmentsanglewindow;
 	
 	//Contour filtering
 	extern uint16_t kellipseheight;
-	extern float kanglewindow;
+	extern float kminimumangle;
 	extern float klengthwidthratio;
     extern float kcommonanglewindow;
 	

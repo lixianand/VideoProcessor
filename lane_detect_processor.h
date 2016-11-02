@@ -56,6 +56,7 @@ void AveragePolygon( Polygon& polygon,
 void ProcessImage( cv::Mat& image,
 				   Polygon& polygon );
 uint32_t FastSquareRoot( int32_t x );
-float FastArcTan( const double slope );
+float FastArcTan2( const float y,
+				   const float x );
 
 #endif // LANEDETECTPROCESSOR_H

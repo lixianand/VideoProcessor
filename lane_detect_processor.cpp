@@ -14,10 +14,13 @@
 #include "lane_detect_processor.h"
 
 //Preprocessor literals
-#ifndef M_PI
+#ifndef M_PI_4
     #define M_PI_4 0.78539816339
 #endif
-#ifndef M_PI
+#ifndef M_PI_2
+    #define M_PI_2 1.57079632679
+#endif
+#ifndef M_1_PI
 	#define M_1_PI 0.31830988618
 #endif
 #define DEGREESPERRADIAN 57.2957795131
@@ -30,27 +33,27 @@ namespace lanedetectconstants {
 		cv::Point(340,250), cv::Point(300,250) };
 	uint16_t koptimumwidth{ static_cast<uint16_t>(optimalpolygon[1].x -
 		optimalpolygon[0].x) };
-	uint16_t kroadwithtolerance{ 60 };
+	uint16_t kroadwithtolerance{ 80 };
     uint16_t kminroadwidth{ static_cast<uint16_t>(koptimumwidth - kroadwithtolerance) };
     uint16_t kmaxroadwidth{ static_cast<uint16_t>(koptimumwidth + kroadwithtolerance) };
 	
 	//Segment filtering
-	uint16_t ksegmentellipseheight{ 6 };	//In terms of pixels, change for flexibility
+	uint16_t ksegmentellipseheight{ 5 };	//In terms of pixels, change for flexibility
 	uint16_t kverticalsegmentlimit{ static_cast<uint16_t>(optimalpolygon[2].y) };
-	float ksegmentanglewindow{ 65.0f };
-	float ksegmentlengthwidthratio{ 1.6f };
+	float ksegmentminimumangle{ 15.0f };
+	float ksegmentlengthwidthratio{ 1.5f };
 	
 	//Contour construction filter
-	float ksegmentsanglewindow{ 20.0f };
+	float ksegmentsanglewindow{ 30.0f };
 	
 	//Contour filtering
-	uint16_t kellipseheight{ 25 };			//In terms of pixels, change for flexibility
-	float kanglewindow{ 70.0f };
-	float klengthwidthratio{ 7.00f };
-    float kcommonanglewindow{ 40.0f };
+	uint16_t kellipseheight{ 20 };			//In terms of pixels, change for flexibility
+	float kminimumangle{ 18.0f };
+	float klengthwidthratio{ 5.00f };
+    float kcommonanglewindow{ 45.0f };
 	
 	//Scoring
-	float klowestscorelimit{ 20.0f };
+	float klowestscorelimit{ 15.0f };
 	
 	//Only effective when scoring contour pairs (to be removed)
 	float kellipseratioweight{ 1.3f };
@@ -222,9 +225,12 @@ void EvaluateSegment( const Contour& contour,
 	cv::fitLine(contour, fitline, CV_DIST_L2, 0, 0.1, 0.1 );
 	
 	//Filter by angle
-	float angle{ FastArcTan(fitline[1] / fitline[0]) };
-	if ( abs(angle - 90.0f) > lanedetectconstants::ksegmentanglewindow ) return;
-	//if ( abs(ellipse.angle - 90.0f) > lanedetectconstants::ksegmentanglewindow )
+	float angle{ FastArcTan2(fitline[1], fitline[0]) };
+	if (angle < 90.0f) {
+		if ( angle < lanedetectconstants::ksegmentminimumangle ) return;
+	} else {
+		if ( angle > (180.0f - lanedetectconstants::ksegmentminimumangle) ) return;
+	}
 
 	evaluatedsegments.push_back( EvaluatedContour{contour, ellipse, lengthwidthratio,
 		angle, fitline} );
@@ -238,15 +244,20 @@ void ConstructFromSegments( const  std::vector<EvaluatedContour>& evaluatedsegme
     for ( const EvaluatedContour &segcontour1 : evaluatedsegments ) {
 		for ( const EvaluatedContour &segcontour2 : evaluatedsegments ) {
 			if ( segcontour1.fitline == segcontour2.fitline ) continue;
-			float angledifference1( abs(segcontour1.angle -	segcontour2.angle) );
-			if ( angledifference1 < lanedetectconstants::ksegmentsanglewindow ) continue;
-			float createdangle { FastArcTan((segcontour1.ellipse.center.y -
-				segcontour2.ellipse.center.y) / (segcontour1.ellipse.center.x -
+			float angledifference1( fabs(segcontour1.angle -	segcontour2.angle) );
+			if ( angledifference1 > lanedetectconstants::ksegmentsanglewindow ) continue;
+			float createdangle { FastArcTan2((segcontour1.ellipse.center.y -
+				segcontour2.ellipse.center.y), (segcontour1.ellipse.center.x -
 				segcontour2.ellipse.center.x)) };
-			float angledifference2( abs(createdangle -	segcontour1.angle) );
-			if ( angledifference2 < lanedetectconstants::ksegmentsanglewindow ) continue;
-			float angledifference3( abs(createdangle -	segcontour2.angle) );
-			if ( angledifference3 < lanedetectconstants::ksegmentsanglewindow ) continue;
+			if (createdangle < 90.0f) {
+				if ( createdangle < lanedetectconstants::ksegmentminimumangle ) return;
+			} else {
+				if ( createdangle > (180.0f - lanedetectconstants::ksegmentminimumangle) ) return;
+			}
+			float angledifference2( fabs(createdangle -	segcontour1.angle) );
+			if ( angledifference2 > lanedetectconstants::ksegmentsanglewindow ) continue;
+			float angledifference3( fabs(createdangle -	segcontour2.angle) );
+			if ( angledifference3 > lanedetectconstants::ksegmentsanglewindow ) continue;
 			std::cout << createdangle << "," << angledifference1 << "," <<
 				angledifference2 << "," << angledifference3 << std::endl;
 			Contour newcontour{ segcontour1.contour };
@@ -272,8 +283,11 @@ void SortContours( const std::vector<EvaluatedContour>& evaluatedsegments,
 		//	lanedetectconstants::klength ) continue;
 		
 		//Filter by angle
-		if ( abs(evaluatedcontour.angle - 90.0f) >
-			lanedetectconstants::kanglewindow ) continue;
+		if (evaluatedcontour.angle  < 90.0f) {
+			if ( evaluatedcontour.angle < lanedetectconstants::kminimumangle ) return;
+		} else {
+			if ( evaluatedcontour.angle > (180.0f - lanedetectconstants::kminimumangle) ) return;
+		}
 			
 		//Filter by length to width ratio
 		if ( evaluatedcontour.lengthwidthratio < lanedetectconstants::klengthwidthratio )
@@ -389,17 +403,17 @@ float ScoreContourPair( const Polygon& polygon,
 {
 	//Filter by common angle
 	float deviationangle{ 180.0f - leftcontour.angle -	rightcontour.angle };
-	if ( abs(deviationangle) > lanedetectconstants::kcommonanglewindow ) return (-FLT_MAX);
+	if ( fabs(deviationangle) > lanedetectconstants::kcommonanglewindow ) return (-FLT_MAX);
 	
 	//Calculate score
 	float weightedscore{ 0.0f };
 	weightedscore += lanedetectconstants::kellipseratioweight * (
 		leftcontour.lengthwidthratio + rightcontour.lengthwidthratio);
-	weightedscore += lanedetectconstants::kangleweight * abs(deviationangle);
+	weightedscore += lanedetectconstants::kangleweight * fabs(deviationangle);
 	weightedscore += lanedetectconstants::kcenteredweight * (
-		abs(imagewidth - polygon[0].x - polygon[1].x));
+		fabs(imagewidth - polygon[0].x - polygon[1].x));
 	weightedscore += lanedetectconstants::kwidthweight * (
-		abs(lanedetectconstants::koptimumwidth -(polygon[1].x - polygon[0].x)));
+		fabs(lanedetectconstants::koptimumwidth -(polygon[1].x - polygon[0].x)));
 	weightedscore += lanedetectconstants::klowestpointweight * (
 		imageheight - polygon[0].y);
 	return weightedscore;
@@ -593,8 +607,8 @@ void AveragePolygon ( Polygon& polygon,
 	for ( Polygon &ipolygon : pastpolygons ) {
 		float differencefromaverage{0.0f};
 		for (int i = 0; i < ipolygon.size(); i++) {
-			differencefromaverage += abs(averagepolygon[i].x - ipolygon[i].x);
-			differencefromaverage += abs(averagepolygon[i].y - ipolygon[i].y);
+			differencefromaverage += fabs(averagepolygon[i].x - ipolygon[i].x);
+			differencefromaverage += fabs(averagepolygon[i].y - ipolygon[i].y);
 		}
 		polygondifferences.push_back( PolygonDifferences { ipolygon,
 			differencefromaverage } );
@@ -638,9 +652,27 @@ uint32_t FastSquareRoot( int32_t x )
 }
 
 /*****************************************************************************************/
-float FastArcTan( const double slope )
+float FastArcTan2( const float y,
+				   const float x )
 {
-    return ( 90.f + DEGREESPERRADIAN * ( M_PI_4 * slope - slope * (fabs(slope) - 1) *
-		(0.2447 + 0.0663 * fabs(slope))) );
+	//Check if 90 or 0
+	if ( y == 0.0f ) return 0.0f;
+	if ( x == 0.0f ) return 90.0f;
+
+	//Calculate
+	float a( std::min(fabs(x),fabs(y)) / std::max(fabs(x),fabs(y)) );
+	float s{ a * a };
+	float angle{ (((-0.0464964749 * s + 0.15931422) * s - 0.327622764) * s
+		* a + a) };
+	if (fabs(y) > fabs(x)) angle = M_PI_2 - angle;
+	if (x < 0) angle = M_PI - angle;
+	if (y < 0) angle *= -1.0;
+	
+	//Convert from radians
+	angle *= DEGREESPERRADIAN;
+	if ( angle < 0 ) angle += 180.0;
+	
+	//return
+	return angle;
 }
   
