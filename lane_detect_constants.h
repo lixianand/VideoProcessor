@@ -23,12 +23,12 @@ namespace lanedetectconstants {
 	extern uint16_t kellipseheight;
 	extern float kminimumangle;
 	extern float klengthwidthratio;
-    extern float kcommonanglewindow;
 	
 	//Scoring
 	extern float klowestscorelimit;
 	
 	//Only effective when scoring contour pairs (to be removed)
+    extern float kcommonanglewindow;
 	extern float kellipseratioweight;
 	extern float kangleweight;
 	extern float kcenteredweight;

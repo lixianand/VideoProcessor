@@ -14,11 +14,14 @@
 #include "lane_detect_processor.h"
 
 //Preprocessor literals
-#ifndef M_PI_4
-    #define M_PI_4 0.78539816339
+#ifndef M_PI
+    #define M_PI 3.14159265359
 #endif
 #ifndef M_PI_2
     #define M_PI_2 1.57079632679
+#endif
+#ifndef M_PI_4
+    #define M_PI_4 0.78539816339
 #endif
 #ifndef M_1_PI
 	#define M_1_PI 0.31830988618
@@ -50,12 +53,12 @@ namespace lanedetectconstants {
 	uint16_t kellipseheight{ 20 };			//In terms of pixels, change for flexibility
 	float kminimumangle{ 18.0f };
 	float klengthwidthratio{ 5.00f };
-    float kcommonanglewindow{ 45.0f };
 	
 	//Scoring
 	float klowestscorelimit{ 15.0f };
 	
 	//Only effective when scoring contour pairs (to be removed)
+    float kcommonanglewindow{ 45.0f };
 	float kellipseratioweight{ 1.3f };
 	float kangleweight{ -2.2f };
 	float kcenteredweight{ -1.0f };
@@ -115,11 +118,11 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
     std::vector<std::vector<cv::Point>> constructedcontours;
 	ConstructFromSegments( evaluatedchildsegments, constructedcontours );
-	for (int i = 0; i < constructedcontours.size(); i++){
-		drawContours(image, constructedcontours, i, cv::Scalar(255,255,0), 1, 8);
- 	}
+	//for (int i = 0; i < constructedcontours.size(); i++){
+	//	drawContours(image, constructedcontours, i, cv::Scalar(255,255,0), 1, 8);
+ 	//}
 	//ConstructFromSegments( evaluatedparentsegments, constructedcontours );
-	std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
+	//std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
 
 //-----------------------------------------------------------------------------------------
 //Evaluate constructed segments
@@ -258,8 +261,8 @@ void ConstructFromSegments( const  std::vector<EvaluatedContour>& evaluatedsegme
 			if ( angledifference2 > lanedetectconstants::ksegmentsanglewindow ) continue;
 			float angledifference3( fabs(createdangle -	segcontour2.angle) );
 			if ( angledifference3 > lanedetectconstants::ksegmentsanglewindow ) continue;
-			std::cout << createdangle << "," << angledifference1 << "," <<
-				angledifference2 << "," << angledifference3 << std::endl;
+			//std::cout << createdangle << "," << angledifference1 << "," <<
+			//	angledifference2 << "," << angledifference3 << std::endl;
 			Contour newcontour{ segcontour1.contour };
 			newcontour.insert( newcontour.end(), segcontour2.contour.begin(),
 				segcontour2.contour.end() );
@@ -279,24 +282,19 @@ void SortContours( const std::vector<EvaluatedContour>& evaluatedsegments,
 		//Filter by length (ellipse vs segment?)
 		if ( evaluatedcontour.ellipse.size.height < lanedetectconstants::kellipseheight )
 			continue;
-		//if ( evaluatedcontour.contour.arcLength(contour, false) <
-		//	lanedetectconstants::klength ) continue;
 		
-		//Filter by angle
-		if (evaluatedcontour.angle  < 90.0f) {
-			if ( evaluatedcontour.angle < lanedetectconstants::kminimumangle ) return;
-		} else {
-			if ( evaluatedcontour.angle > (180.0f - lanedetectconstants::kminimumangle) ) return;
-		}
-			
 		//Filter by length to width ratio
 		if ( evaluatedcontour.lengthwidthratio < lanedetectconstants::klengthwidthratio )
 			continue;
 		
 		//Push into either left or right evaluated contour set
 		if ( evaluatedcontour.ellipse.center.x < (imagewidth * 0.5f) ) {
+			//Filter by angle
+			if ( evaluatedcontour.angle < lanedetectconstants::kminimumangle ) return;
 			leftcontours.push_back( evaluatedcontour );
 		} else {
+			//Filter by angle
+			if ( evaluatedcontour.angle > (180.0f - lanedetectconstants::kminimumangle) ) return;
 			rightcontours.push_back( evaluatedcontour );
 		}
 	}

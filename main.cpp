@@ -71,11 +71,11 @@ int main(int argc,char *argv[])
 		return 0;
 	}
 	
-	cv::namedWindow("Output", CV_WINDOW_NORMAL );
+	//cv::namedWindow("Output", CV_WINDOW_NORMAL );
 	//Create cheap log file
-	//std::ofstream out("log.txt");
-    //std::streambuf *coutbuf = std::cout.rdbuf();
-    //std::cout.rdbuf(out.rdbuf());
+	std::ofstream out("log.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf();
+    std::cout.rdbuf(out.rdbuf());
 
 	for (int i = 1; i < argc; i++ ) {
 		VideoCapture capture(argv[i]);
@@ -113,7 +113,7 @@ int main(int argc,char *argv[])
 			vecpolygon.push_back(polygon[0]);
 			int timeposition{static_cast<int>((i/capture.get(CAP_PROP_FPS)))};
 			//cout << to_string(timeposition) << "s ";
-			//PrintLanes(polygon);
+			PrintLanes(polygon);
 
 			//Overlay lanes
 			if ( polygon[0] != cv::Point(0,0) ) {
@@ -129,8 +129,8 @@ int main(int argc,char *argv[])
 			//if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
 			//std::cout << "----------------------------------------------------------" << std::endl;
-			imshow("Output", frame);
-			waitKey(0); // waits to display frame
+			//imshow("Output", frame);
+			//waitKey(0); // waits to display frame
 			//if ( frames >= 300) break;
 
 		}
@@ -139,5 +139,5 @@ int main(int argc,char *argv[])
 		cout << "Completed, it took " << to_string(spd) << " ms per frame.";
 		output.release();
 	}
-		//std::cout.rdbuf(coutbuf); //reset to standard output again
+		std::cout.rdbuf(coutbuf); //reset to standard output again
 }
