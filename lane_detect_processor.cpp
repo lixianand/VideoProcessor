@@ -291,10 +291,12 @@ void SortContours( const std::vector<EvaluatedContour>& evaluatedsegments,
 		if ( evaluatedcontour.ellipse.center.x < (imagewidth * 0.5f) ) {
 			//Filter by angle
 			if ( evaluatedcontour.angle < lanedetectconstants::kminimumangle ) return;
+			if ( evaluatedcontour.angle > 100.0f ) return;
 			leftcontours.push_back( evaluatedcontour );
 		} else {
 			//Filter by angle
 			if ( evaluatedcontour.angle > (180.0f - lanedetectconstants::kminimumangle) ) return;
+			if ( evaluatedcontour.angle < 80.0f ) return;
 			rightcontours.push_back( evaluatedcontour );
 		}
 	}
