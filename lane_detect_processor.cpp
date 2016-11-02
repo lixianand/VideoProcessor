@@ -37,9 +37,11 @@ namespace lanedetectconstants {
 	//Segment filtering
 	uint16_t ksegmentellipseheight{ 6 };	//In terms of pixels, change for flexibility
 	uint16_t kverticalsegmentlimit{ static_cast<uint16_t>(optimalpolygon[2].y) };
-	float ksegmentanglewindow{ 75.0f };
+	float ksegmentanglewindow{ 65.0f };
 	float ksegmentlengthwidthratio{ 1.6f };
-	float ksegmentsanglewindow{ 45.0f };
+	
+	//Contour construction filter
+	float ksegmentsanglewindow{ 20.0f };
 	
 	//Contour filtering
 	uint16_t kellipseheight{ 25 };			//In terms of pixels, change for flexibility
@@ -66,24 +68,25 @@ void ProcessImage ( cv::Mat& image,
 //Image manipulation
 //-----------------------------------------------------------------------------------------
 	//Change to grayscale
-	cv::cvtColor( image, image, CV_BGR2GRAY );
+	cv::Mat modifiedimage;
+	cv::cvtColor( image, modifiedimage, CV_BGR2GRAY );
 	
 	//Blur to reduce noise
-    cv::blur( image, image, cv::Size(3,3) );
+    cv::blur( modifiedimage, modifiedimage, cv::Size(3,3) );
 	
 //-----------------------------------------------------------------------------------------
 //Find contours
 //-----------------------------------------------------------------------------------------
 	//Auto threshold values for canny edge detection
-    //double otsuthreshval = cv::threshold( image, image, 0, 255,
+    //double otsuthreshval = cv::threshold( modifiedimage, modifiedimage, 0, 255,
 	//	CV_THRESH_BINARY | CV_THRESH_OTSU );
 	//Canny edge detection
-    cv::Canny(image, image, 40, 120, 3 );
-    //cv::Canny(image, image, otsuthreshval * 0.5, otsuthreshval );
-	//cv::cvtColor( image, cannyimage, CV_GRAY2BGR );
+    cv::Canny(modifiedimage, modifiedimage, 40, 120, 3 );
+    //cv::Canny(modifiedimage, modifiedimage, otsuthreshval * 0.5, otsuthreshval );
+	//cv::cvtColor( modifiedimage, cannymodifiedimage, CV_GRAY2BGR );
 	std::vector<Contour> detectedcontours;
     std::vector<cv::Vec4i> detectedhierarchy;
-    cv::findContours( image, detectedcontours, detectedhierarchy,
+    cv::findContours( modifiedimage, detectedcontours, detectedhierarchy,
 		CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE );
 	//std::cout << "Contours found: " << detectedcontours.size() << std::endl;
 	//Contours removed by position in function
@@ -109,8 +112,11 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------	
     std::vector<std::vector<cv::Point>> constructedcontours;
 	ConstructFromSegments( evaluatedchildsegments, constructedcontours );
+	for (int i = 0; i < constructedcontours.size(); i++){
+		drawContours(image, constructedcontours, i, cv::Scalar(255,255,0), 1, 8);
+ 	}
 	//ConstructFromSegments( evaluatedparentsegments, constructedcontours );
-	//std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
+	std::cout << "Contours constructed: " << constructedcontours.size() << std::endl;
 
 //-----------------------------------------------------------------------------------------
 //Evaluate constructed segments
@@ -231,20 +237,22 @@ void ConstructFromSegments( const  std::vector<EvaluatedContour>& evaluatedsegme
 {
     for ( const EvaluatedContour &segcontour1 : evaluatedsegments ) {
 		for ( const EvaluatedContour &segcontour2 : evaluatedsegments ) {
+			if ( segcontour1.fitline == segcontour2.fitline ) continue;
+			float angledifference1( abs(segcontour1.angle -	segcontour2.angle) );
+			if ( angledifference1 < lanedetectconstants::ksegmentsanglewindow ) continue;
 			float createdangle { FastArcTan((segcontour1.ellipse.center.y -
 				segcontour2.ellipse.center.y) / (segcontour1.ellipse.center.x -
-			segcontour2.ellipse.center.x)) };
-			float angledifference1( abs(segcontour1.angle -	segcontour2.angle) );
+				segcontour2.ellipse.center.x)) };
 			float angledifference2( abs(createdangle -	segcontour1.angle) );
+			if ( angledifference2 < lanedetectconstants::ksegmentsanglewindow ) continue;
 			float angledifference3( abs(createdangle -	segcontour2.angle) );
-			if ((angledifference1 < lanedetectconstants::ksegmentsanglewindow) &&
-				(angledifference2 < lanedetectconstants::ksegmentsanglewindow) &&
-				(angledifference3 < lanedetectconstants::ksegmentsanglewindow)) {
-				Contour newcontour{ segcontour1.contour };
-				newcontour.insert( newcontour.end(), segcontour2.contour.begin(),
-					segcontour2.contour.end() );
-				constructedcontours.push_back( newcontour );
-			}
+			if ( angledifference3 < lanedetectconstants::ksegmentsanglewindow ) continue;
+			std::cout << createdangle << "," << angledifference1 << "," <<
+				angledifference2 << "," << angledifference3 << std::endl;
+			Contour newcontour{ segcontour1.contour };
+			newcontour.insert( newcontour.end(), segcontour2.contour.begin(),
+				segcontour2.contour.end() );
+			constructedcontours.push_back( newcontour );
 		}
     }	
 	return;
