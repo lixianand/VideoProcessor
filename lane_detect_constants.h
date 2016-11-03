@@ -27,14 +27,6 @@ namespace lanedetectconstants {
 	//Scoring
 	extern float klowestscorelimit;
 	
-	//Only effective when scoring contour pairs (to be removed)
-    extern float kcommonanglewindow;
-	extern float kellipseratioweight;
-	extern float kangleweight;
-	extern float kcenteredweight;
-	extern float kwidthweight;
-	extern float klowestpointweight;
-	
 }
 
 #endif // LANEDETECTCONSTANTS_H
