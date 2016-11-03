@@ -44,18 +44,18 @@ namespace lanedetectconstants {
 	uint16_t ksegmentellipseheight{ 10 };			//In terms of pixels, future change
 	uint16_t kverticalsegmentlimit{ static_cast<uint16_t>(optimalpolygon[2].y) };
 	float ksegmentminimumangle{ 23.1f };
-	float ksegmentlengthwidthratio{ 1.85f };
+	float ksegmentlengthwidthratio{ 2.0f };
 	
 	//Contour construction filter
-	float ksegmentsanglewindow{ 42.0f };
+	float ksegmentsanglewindow{ 40.0f };
 	
 	//Contour filtering
 	uint16_t kellipseheight{ 17 };					//In terms of pixels, future change
 	float kminimumangle{ 16.9f };
-	float klengthwidthratio{ 4.05f };
+	float klengthwidthratio{ 4.5f };
 	
 	//Scoring
-	float klowestscorelimit{ 25.0f };
+	float klowestscorelimit{ 20.0f };
 
 }
 
