@@ -101,10 +101,11 @@ int main(int argc,char *argv[])
 			//Get frame
 			frames++;
 			capture >> frame;
+			cv::Mat workingimage { frame };
 			
 			//std::cout << "Frame #" << i << std::endl;
 			Polygon polygon { cv::Point(0,0) };
-			ProcessImage( frame, polygon );
+			ProcessImage( workingimage, polygon );
 			//AveragePolygon ( polygon,  polygons, 3, 5);
 			std::vector<cv::Point> vecpolygon;
 			vecpolygon.push_back(polygon[3]);
