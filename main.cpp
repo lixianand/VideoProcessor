@@ -71,7 +71,7 @@ int main(int argc,char *argv[])
 		return 0;
 	}
 	
-	cv::namedWindow("Output", CV_WINDOW_NORMAL );
+	///cv::namedWindow("Output", CV_WINDOW_NORMAL );
 	//Create cheap log file
 	std::ofstream out("log.txt");
     std::streambuf *coutbuf = std::cout.rdbuf();
@@ -129,8 +129,8 @@ int main(int argc,char *argv[])
 			//if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
 			//std::cout << "----------------------------------------------------------" << std::endl;
-			imshow("Output", frame);
-			waitKey(1); // waits to display frame
+			///imshow("Output", frame);
+			///waitKey(1); // waits to display frame
 			//if ( frames >= 300) break;
 
 		}
