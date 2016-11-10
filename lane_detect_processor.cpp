@@ -219,13 +219,21 @@ void EvaluateSegment( const Contour& contour,
 	
 	//Filter by length to width ratio
 	if ( lengthwidthratio < lanedetectconstants::ksegmentlengthwidthratio ) return;
-		
+	/*
 	//Create fitline
 	cv::Vec4f fitline;
 	cv::fitLine(contour, fitline, CV_DIST_L2, 0, 0.1, 0.1 );
-	
+
 	//Filter by angle
 	float angle{ FastArcTan2(fitline[1], fitline[0]) };
+	*/
+	float angle;
+	if (ellipse.angle > 90.0f) {
+		angle = ellipse.angle - 90.0f;
+	} else {
+		angle = ellipse.angle + 90.0f;
+	}
+	
 	if (angle < 90.0f) {
 		if ( angle < lanedetectconstants::ksegmentminimumangle ) return;
 	} else {
@@ -233,7 +241,8 @@ void EvaluateSegment( const Contour& contour,
 	}
 
 	evaluatedsegments.push_back( EvaluatedContour{contour, ellipse, lengthwidthratio,
-		angle, fitline} );
+		angle} );
+	//	angle, fitline} );
 	return;
 }
 
@@ -243,7 +252,9 @@ void ConstructFromSegments( const  std::vector<EvaluatedContour>& evaluatedsegme
 {
     for ( const EvaluatedContour &segcontour1 : evaluatedsegments ) {
 		for ( const EvaluatedContour &segcontour2 : evaluatedsegments ) {
-			if ( segcontour1.fitline == segcontour2.fitline ) continue;
+			//if ( segcontour1.ellipse == segcontour2.ellipse ) continue;
+			if ( segcontour1.contour == segcontour2.contour ) continue;
+			//if ( segcontour1.fitline == segcontour2.fitline ) continue;
 			float angledifference1( fabs(segcontour1.angle -	segcontour2.angle) );
 			if ( angledifference1 > lanedetectconstants::ksegmentsanglewindow ) continue;
 			float createdangle { FastArcTan2((segcontour1.ellipse.center.y -
