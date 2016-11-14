@@ -31,7 +31,7 @@
 
 namespace lanedetectconstants {
 	//Image evaluation
-	uint16_t lowercannythreshold{ 40 };
+	float kotsuscalefactor{ 0.25f };
 	
 	//Polygon filtering
 	Polygon optimalpolygon{ cv::Point(100,400),
@@ -51,7 +51,7 @@ namespace lanedetectconstants {
 	float ksegmentlengthwidthratio{ 2.4f };
 	
 	//Contour construction filter
-	float ksegmentsanglewindow{ 37.0f };
+	float ksegmentsanglewindow{ 34.0f };
 	
 	//Contour filtering
 	uint16_t kellipseheight{ 25 };					//In terms of pixels, future change
@@ -81,13 +81,11 @@ void ProcessImage ( cv::Mat& image,
 //Find contours
 //-----------------------------------------------------------------------------------------
 	//Auto threshold values for canny edge detection
-    //double otsuthreshval = cv::threshold( image, image, 0, 255,
-	//										CV_THRESH_BINARY | CV_THRESH_OTSU );
+	cv::Scalar averageintensity = cv::mean( image );
+	float lowerthreshold{ lanedetectconstants::kotsuscalefactor *
+						  averageintensity.val[0] };
 	//Canny edge detection
-    //cv::Canny( image, image, otsuthreshval * 0.5, otsuthreshval );
-    cv::Canny( image, image,
-			   lanedetectconstants::lowercannythreshold,
-			   3 * lanedetectconstants::lowercannythreshold );
+    cv::Canny( image, image, lowerthreshold, 3 * lowerthreshold );
 	std::vector<Contour> detectedcontours;
     std::vector<cv::Vec4i> detectedhierarchy;
     cv::findContours( image, detectedcontours, detectedhierarchy,
@@ -155,8 +153,8 @@ void ProcessImage ( cv::Mat& image,
 	for ( EvaluatedContour &leftevaluatedontour : leftcontours ) {
 		for ( EvaluatedContour &rightevaluatedcontour : rightcontours ) {
 			//Check sum angle
-			if ( (fabs(180.0f - leftevaluatedontour.angle + rightevaluatedcontour.angle) *
-					   0.5f) > lanedetectconstants::kanglefromcenter ) return;
+			if ( (fabs(180.0f - leftevaluatedontour.angle - rightevaluatedcontour.angle) *
+				  0.5f) > lanedetectconstants::kanglefromcenter ) continue;
 			
 			Polygon newpolygon{ cv::Point(0,0),
 								cv::Point(0,0),
@@ -326,12 +324,12 @@ void FindPolygon( Polygon& polygon,
 											leftcontour.end(),
 											[]( const cv::Point& lhs,
 												const cv::Point& rhs )
-												{ return lhs.y < rhs.y; } );
+											{ return lhs.y < rhs.y; } );
 	auto minmaxyright = std::minmax_element( rightcontour.begin(),
 											 rightcontour.end(),
 											 []( const cv::Point& lhs,
 												 const cv::Point& rhs )
-												 { return lhs.y < rhs.y; } );
+											 { return lhs.y < rhs.y; } );
 	int leftmaxx{ minmaxyleft.second->x },
 		leftminx{ minmaxyleft.first->x },
 		leftmaxy{ minmaxyleft.second->y },
@@ -355,15 +353,15 @@ void FindPolygon( Polygon& polygon,
 	if ((leftmaxx - leftminx) == 0) {
 		leftslope = FLT_MAX;
 	} else {
-		leftslope = static_cast<float>(leftmaxy-leftminy) / static_cast<float>(
-			leftmaxx - leftminx);
+		leftslope = static_cast<float>(leftmaxy-leftminy) /
+					static_cast<float>(leftmaxx - leftminx);
 	}
 	float rightslope;
 	if ((rightmaxx - rightminx) == 0) {
 		rightslope = FLT_MAX;
 	} else {
-		rightslope = static_cast<float>(rightmaxy-rightminy) / static_cast<float>(
-			rightmaxx - rightminx);
+		rightslope = static_cast<float>(rightmaxy-rightminy) /
+					 static_cast<float>(rightmaxx - rightminx);
 	}
 
 	//Calculate center points
@@ -373,9 +371,11 @@ void FindPolygon( Polygon& polygon,
 									 (rightmaxy + rightminy) * 0.5f) };
 	
 	//Calculate optimal bottom points
-	cv::Point bottomleftoptimal{ cv::Point(leftcenter.x +(maxyoptimal - leftcenter.y)/leftslope,
+	cv::Point bottomleftoptimal{ cv::Point(leftcenter.x +(maxyoptimal - leftcenter.y) /
+										   leftslope,
 										   maxyoptimal) };
-	cv::Point bottomrightoptimal{ cv::Point(rightcenter.x +	(maxyoptimal - rightcenter.y)/rightslope,
+	cv::Point bottomrightoptimal{ cv::Point(rightcenter.x +	(maxyoptimal - rightcenter.y) /
+											rightslope,
 											maxyoptimal) };
 	
 	//Perform filtering based on width of polygon with optimal maxy
@@ -383,26 +383,26 @@ void FindPolygon( Polygon& polygon,
 	if ( roadwidth < lanedetectconstants::kminroadwidth ) return;
 	if ( roadwidth > lanedetectconstants::kmaxroadwidth ) return;
 	
-	cv::Point topright{ cv::Point(rightcenter.x - (rightcenter.y - miny)/rightslope,
+	cv::Point topright{ cv::Point(rightcenter.x - (rightcenter.y - miny) / rightslope,
 								  miny) };
-	cv::Point topleft{ cv::Point(leftcenter.x - (leftcenter.y - miny)/leftslope,
+	cv::Point topleft{ cv::Point(leftcenter.x - (leftcenter.y - miny) / leftslope,
 								 miny) };
 		
 	//Check validity of shape
-	if ((((leftslope < 0.0f) && (rightslope > 0.0f)) ||
-		((leftslope > 0.0f) && (rightslope > 0.0f)) ||
-		((leftslope < 0.0f) && (rightslope < 0.0f))) &&
-		((bottomleftoptimal.x < bottomrightoptimal.x) && (topleft.x < topright.x))){
+	if ( (((leftslope < 0.0f) && (rightslope > 0.0f)) ||
+		  ((leftslope > 0.0f) && (rightslope > 0.0f)) ||
+		  ((leftslope < 0.0f) && (rightslope < 0.0f))) &&
+		 ((bottomleftoptimal.x < bottomrightoptimal.x) && (topleft.x < topright.x)) ) {
 
 		//Construct polygon
 		if ( useoptimaly ) {
 			polygon[0] = bottomleftoptimal;
 			polygon[1] = bottomrightoptimal;
 		} else {
-			polygon[0] = cv::Point(leftcenter.x +
-				(maxy - leftcenter.y)/leftslope, maxy);
-			polygon[1] = cv::Point(rightcenter.x +
-				(maxy - rightcenter.y)/rightslope, maxy);
+			polygon[0] = cv::Point(leftcenter.x + (maxy - leftcenter.y) / leftslope,
+								   maxy);
+			polygon[1] = cv::Point(rightcenter.x + (maxy - rightcenter.y) / rightslope,
+								   maxy);
 		}
 		polygon[2] = topright;
 		polygon[3] = topleft;
@@ -515,7 +515,7 @@ void AveragePolygon ( Polygon& polygon,
 		  polygondifferences.end(),
 		  [](const PolygonDifferences& a,
 			 const PolygonDifferences& b )
-			 { return a.differencefromaverage < b.differencefromaverage; } );
+		  { return a.differencefromaverage < b.differencefromaverage; } );
 
 	//Sum closest values
 	averagepolygon = { cv::Point(0,0),
@@ -537,21 +537,6 @@ void AveragePolygon ( Polygon& polygon,
 			   std::end(averagepolygon),
 			   std::begin(polygon));
 	return;
-}
-
-/*****************************************************************************************/
-uint32_t FastSquareRoot( int32_t x )
-{
-    int32_t a, b;
-    b = x;
-    a = x = 0x3f;
-    x = b / x;
-    a = x = (x + a) >> 1;
-    x = b / x;
-    a = x = (x + a) >> 1;
-    x = b / x;
-    x = (x + a) >> 1;
-    return x;  
 }
 
 /*****************************************************************************************/
