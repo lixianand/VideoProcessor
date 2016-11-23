@@ -13,7 +13,7 @@ struct EvaluatedContour {
     cv::RotatedRect ellipse;
     float lengthwidthratio;
 	float angle;
-    //cv::Vec4f fitline;
+    cv::Vec4f fitline;
 };
 
 struct PolygonDifferences {
@@ -34,6 +34,8 @@ void FindPolygon( Polygon& polygon,
                   const Contour& leftcontour,
 				  const Contour& rightcontour,
 				  bool useoptimaly = false );
+float Score( const Polygon& polygon ,
+			 const int imagewidth );
 float PercentMatch( const Polygon& polygon,
 					const cv::Mat& optimalmat );
 void AveragePolygon( Polygon& polygon,
