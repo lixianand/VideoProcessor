@@ -68,7 +68,7 @@ int main(int argc,char *argv[])
 		return 0;
 	}
 	
-	///cv::namedWindow("Output", CV_WINDOW_NORMAL );
+	cv::namedWindow("Output", CV_WINDOW_NORMAL );
 	//Create cheap log file
 	std::ofstream out("log.txt");
     std::streambuf *coutbuf = std::cout.rdbuf();
@@ -103,7 +103,7 @@ int main(int argc,char *argv[])
 			//std::cout << "Frame #" << i << std::endl;
 			Polygon polygon { cv::Point(0,0) };
 			ProcessImage( workingimage, polygon );
-			//AveragePolygon ( polygon,  polygons, 3, 5);
+			AveragePolygon ( polygon,  polygons, 4, 7);
 			std::vector<cv::Point> vecpolygon;
 			vecpolygon.push_back(polygon[3]);
 			vecpolygon.push_back(polygon[2]);
@@ -116,10 +116,12 @@ int main(int argc,char *argv[])
 			//Overlay lanes
 			if ( polygon[0] != cv::Point(0,0) ) {
 				//std::cout << "Lanes found!" << std::endl;
-				cv::Mat polygonimage{ frame.size(), frame.type(), cv::Scalar(0) };
-				cv::Point newpolygon[4];
-				std::copy( polygon.begin(), polygon.end(), newpolygon );
-				cv::fillConvexPoly( polygonimage, newpolygon, 4, Scalar(0,255,0,127) );
+				cv::Point cvpointarray[4];
+				std::copy( polygon.begin(), polygon.end(), cvpointarray );
+				cv::Mat polygonimage{ frame.size(),
+									  CV_8UC1,
+									  cv::Scalar(0) };
+				cv::fillConvexPoly( polygonimage, cvpointarray, 4,  cv::Scalar(1) );
 				OverlayImage( &polygonimage, &frame );
 			}
 			
@@ -127,8 +129,8 @@ int main(int argc,char *argv[])
 			//if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
 			//std::cout << "----------------------------------------------------------" << std::endl;
-			///imshow("Output", frame);
-			///waitKey(1); // waits to display frame
+			imshow("Output", frame);
+			waitKey(1); // waits to display frame
 			//if ( frames >= 300) break;
 
 		}
