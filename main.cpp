@@ -46,18 +46,15 @@ void PrintLanes(Polygon& polygon) {
 	cout << "|" << endl;
 }
 
-void overlayImage(Mat* overlay, Mat* src, double transparency)
+void OverlayImage( cv::Mat* overlay,
+                   cv::Mat* src )
 {
     for (int i = 0; i < src->cols; i++) {
         for (int j = 0; j < src->rows; j++) {
-            Vec3b &intensity = src->at<Vec3b>(j, i);
-            Vec3b &intensityoverlay = overlay->at<Vec3b>(j, i);
-            for(int k = 0; k < src->channels(); k++) {
-                uchar col = intensityoverlay.val[k];
-                if (col != 0){
-                    intensity.val[k] = (intensity.val[k]*(1-transparency) + (transparency*col));
-                }
-            }
+			if ( overlay->at<uchar>(j, i) != 0 ) {
+				cv::Vec3b &intensity = src->at<cv::Vec3b>(j, i);
+				intensity.val[1] = (intensity.val[1] + 255) * 0.5f;
+			}
         }
     }
 }
@@ -123,7 +120,7 @@ int main(int argc,char *argv[])
 				cv::Point newpolygon[4];
 				std::copy( polygon.begin(), polygon.end(), newpolygon );
 				cv::fillConvexPoly( polygonimage, newpolygon, 4, Scalar(0,255,0,127) );
-				overlayImage( &polygonimage, &frame, 0.5);
+				OverlayImage( &polygonimage, &frame );
 			}
 			
 			double percent = 100*i/capture.get(CAP_PROP_FRAME_COUNT);
