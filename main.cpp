@@ -110,7 +110,7 @@ int main(int argc,char *argv[])
 			//std::cout << "Frame #" << i << std::endl;
 			Polygon polygon { cv::Point(0,0) };
 			ProcessImage( workingimage, polygon );
-			AveragePolygon ( polygon,  polygons, 4, 7);
+			AveragePolygon ( polygon,  polygons, 3, 5);
 			std::vector<cv::Point> vecpolygon;
 			vecpolygon.push_back(polygon[3]);
 			vecpolygon.push_back(polygon[2]);
