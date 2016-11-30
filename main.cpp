@@ -43,7 +43,14 @@ void PrintLanes(Polygon& polygon) {
 			cout << "-";
 		}
 	}
-	cout << "|" << endl;
+	cout << "|";
+	double deviationpix = 0.5 * ( polygon[0].x + 
+								  polygon[1].x - 
+								  width );
+	double deviationper = 100.0 * deviationpix /
+						  static_cast<double>(polygon[1].x -
+											  polygon[0].x);	
+	cout << ", " << deviationper << endl;
 }
 
 void OverlayImage( cv::Mat* overlay,
@@ -68,7 +75,7 @@ int main(int argc,char *argv[])
 		return 0;
 	}
 	
-	cv::namedWindow("Output", CV_WINDOW_NORMAL );
+	///cv::namedWindow("Output", CV_WINDOW_NORMAL );
 	//Create cheap log file
 	std::ofstream out("log.txt");
     std::streambuf *coutbuf = std::cout.rdbuf();
@@ -129,8 +136,8 @@ int main(int argc,char *argv[])
 			//if ( i%100 == 0 ) cout << to_string(percent) << "% done" << endl;
 			output << frame;
 			//std::cout << "----------------------------------------------------------" << std::endl;
-			imshow("Output", frame);
-			waitKey(1); // waits to display frame
+			///imshow("Output", frame);
+			///waitKey(1); // waits to display frame
 			//if ( frames >= 300) break;
 
 		}
