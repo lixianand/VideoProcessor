@@ -208,6 +208,7 @@ void ProcessImage ( cv::Mat& image,
 	std::copy( std::begin(bestpolygon),
 			   std::end(bestpolygon),
 			   std::begin(polygon) );
+	std::cout << std::fixed << std::setprecision(2) <<  maxscore << " ";
 	return;
 }
 

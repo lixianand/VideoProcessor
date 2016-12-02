@@ -52,9 +52,7 @@ void PrintLanes(Polygon& polygon) {
 											  polygon[0].x);	
 	cout << ", " << polygon[1].x - polygon[0].x;
 	cout << ", " << deviationpix;
-	cout << ", " << deviationper;
-	float score{ Score(polygon, 800) };
-	cout << ", " << score << '\n';
+	cout << ", " << deviationper << '\n';
 }
 
 void OverlayImage( cv::Mat* overlay,
