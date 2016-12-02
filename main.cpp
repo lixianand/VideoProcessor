@@ -50,7 +50,11 @@ void PrintLanes(Polygon& polygon) {
 	double deviationper = 100.0 * deviationpix /
 						  static_cast<double>(polygon[1].x -
 											  polygon[0].x);	
-	cout << ", " << deviationper << endl;
+	cout << ", " << polygon[1].x - polygon[0].x;
+	cout << ", " << deviationpix;
+	cout << ", " << deviationper;
+	float score{ Score(polygon, 800) };
+	cout << ", " << score << '\n';
 }
 
 void OverlayImage( cv::Mat* overlay,
