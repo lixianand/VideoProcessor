@@ -13,6 +13,7 @@
 
 //Standard libraries
 #include <iostream>
+#include <iomanip>
 #include <ctime>
 #include <sys/time.h>
 #include <deque>
