@@ -365,9 +365,9 @@ float Score( const Polygon& polygon,
 	float centeroffset{ static_cast<float>(fabs((imagewidth -
 												(polygon[0].x + polygon[1].x)) *
 												0.5f)) };
-	float angleoffset{ 0.5f * fabs(180.0f -
-								   leftevaluatedcontour.angle -
-								   rightevaluatedcontour.angle) };
+	float angleoffset{ 0.5f * static_cast<float>(fabs(180.0f -
+													  leftevaluatedcontour.angle -
+													  rightevaluatedcontour.angle)) };
 	
 	return lanedetectconstants::k_weightedheightwidth * heightwidthratio +
 		   lanedetectconstants::k_weightedangleoffset * angleoffset +
