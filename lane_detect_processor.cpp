@@ -131,10 +131,7 @@ void ProcessImage ( cv::Mat& image,
 //-----------------------------------------------------------------------------------------
 //Find highest scoring pair of contours
 //-----------------------------------------------------------------------------------------	
-	Polygon bestpolygon{ cv::Point(0,0),
-						 cv::Point(0,0),
-						 cv::Point(0,0),
-						 cv::Point(0,0) };
+	Polygon bestpolygon{ lanedetectconstants::defaultpolygon };
 	float maxscore{ lanedetectconstants::k_lowestscorelimit };
 	EvaluatedContour leftcontour;
 	EvaluatedContour rightcontour;
@@ -153,7 +150,7 @@ void ProcessImage ( cv::Mat& image,
 						 image.rows );
 				
 			//If invalid polygon created, goto next
-			if ( newpolygon[0] == cv::Point(0,0) ) continue;
+			if ( newpolygon == lanedetectconstants::defaultpolygon ) continue;
 			
 			//Score
 			float score{ Score(newpolygon,
@@ -284,8 +281,10 @@ void FindPolygon( Polygon& polygon,
 	if ( leftevaluatedcontour.center.x > rightevaluatedcontour.center.x ) return;
 	
 	//Define slopes
-	float leftslopeinverse { leftevaluatedcontour.fitline[0] / leftevaluatedcontour.fitline[1] };
-	float rightslopeinverse { rightevaluatedcontour.fitline[0] / rightevaluatedcontour.fitline[1] };
+	float leftslopeinverse { leftevaluatedcontour.fitline[0] /
+							 leftevaluatedcontour.fitline[1] };
+	float rightslopeinverse { rightevaluatedcontour.fitline[0] /
+							  rightevaluatedcontour.fitline[1] };
 	
 	//Check shape before continuing
 	if ( (leftslopeinverse > 0.0f) && (rightslopeinverse < 0.0f) ) return;
@@ -388,13 +387,11 @@ void AveragePolygon ( Polygon& polygon,
 	}
 
 	//Sum nonzero
-	Polygon averagepolygon { cv::Point(0,0),
-							 cv::Point(0,0),
-							 cv::Point(0,0),
-							 cv::Point(0,0) };
+	Polygon averagepolygon { lanedetectconstants::defaultpolygon };
+	
 	int nonzerocount{0};
 	for ( Polygon &ipolygon : pastpolygons ) {
-		if ( ipolygon[0] == cv::Point(0,0) ) continue;
+		if ( ipolygon == lanedetectconstants::defaultpolygon ) continue;
 		nonzerocount++;
 		for ( int i = 0; i < ipolygon.size(); i++ ) {
 			averagepolygon[i].x += ipolygon[i].x;
@@ -437,10 +434,7 @@ void AveragePolygon ( Polygon& polygon,
 		  { return a.differencefromaverage < b.differencefromaverage; } );
 
 	//Sum closest values
-	averagepolygon = { cv::Point(0,0),
-					   cv::Point(0,0),
-					   cv::Point(0,0),
-					   cv::Point(0,0) };
+	averagepolygon = { lanedetectconstants::defaultpolygon };
 	for ( int i = 0; i < samplestoaverage; i++ ) {
 		for (int j = 0; j < 4; j++) {
 			averagepolygon[j].x += polygondifferences[i].polygon[j].x;
